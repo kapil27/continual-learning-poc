@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MLflow as Shared Data Plane — Agentic Continual Learning</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], mono: ['Fira Code', 'monospace'] },
+          colors: { glass: { light: 'rgba(255,255,255,0.08)', dark: 'rgba(0,0,0,0.25)' } }
+        }
+      }
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); }
+    .glass-hover:hover { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.15); }
+    .dark .glass { background: rgba(255,255,255,0.05); }
+    html:not(.dark) .glass { background: rgba(255,255,255,0.65); border-color: rgba(0,0,0,0.08); }
+    html:not(.dark) .glass-hover:hover { background: rgba(255,255,255,0.80); }
+    .card-glow:hover { box-shadow: 0 0 30px rgba(16,185,129,0.15); }
+    .fade-in { animation: fadeIn 0.5s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .code-block { position: relative; }
+    .copy-btn { position: absolute; top: 0.5rem; right: 0.5rem; }
+    pre code { font-family: 'Fira Code', monospace; }
+    .mermaid { background: transparent !important; }
+    .mermaid svg { max-width: 100%; }
+  </style>
+</head>
+<body class="bg-gray-950 dark:bg-gray-950 bg-gray-50 text-gray-100 dark:text-gray-100 text-gray-900 font-sans min-h-screen transition-colors duration-300">
+
+  <!-- Sticky Navbar -->
+  <nav class="sticky top-0 z-50 glass border-b border-white/10 dark:border-white/10 border-gray-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2 text-sm">
+        <a href="../index.html" class="text-emerald-400 hover:text-emerald-300 transition-colors">🏠 Home</a>
+        <span class="text-gray-500">/</span>
+        <span class="text-gray-400 dark:text-gray-400 text-gray-600">Pages</span>
+        <span class="text-gray-500">/</span>
+        <span class="text-emerald-300 dark:text-emerald-300 text-emerald-700 font-medium">04 — MLflow Bridge</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="visitBadge" class="hidden text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">✓ Visited</span>
+        <button onclick="toggleTheme()" class="p-2 rounded-lg glass glass-hover transition-all duration-200 hover:scale-105" title="Toggle theme">
+          <span id="themeIcon" class="text-lg">🌙</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-10 fade-in">
+
+    <!-- Page Header -->
+    <header class="text-center space-y-4">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full glass text-emerald-400 text-xs font-medium tracking-wider uppercase">
+        <span>Module 04</span>
+        <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+        <span>Data Plane</span>
+      </div>
+      <h1 class="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent leading-tight">
+        MLflow as Shared Data Plane
+      </h1>
+      <p class="text-lg text-gray-400 dark:text-gray-400 text-gray-600 max-w-2xl mx-auto">
+        The bridge between production experience and model improvement — how traces become training data.
+      </p>
+    </header>
+
+    <!-- Section 1: What MLflow Captures -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-emerald-300 dark:text-emerald-300 text-emerald-700 flex items-center gap-2">
+        <span class="text-3xl">📊</span> What MLflow Captures
+      </h2>
+      <div class="glass rounded-2xl overflow-hidden card-glow transition-all duration-300">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-white/10 dark:border-white/10 border-gray-200 bg-emerald-500/10">
+                <th class="text-left px-5 py-3 font-semibold text-emerald-300 dark:text-emerald-300 text-emerald-700">Data Type</th>
+                <th class="text-left px-5 py-3 font-semibold text-emerald-300 dark:text-emerald-300 text-emerald-700">Format (Spans)</th>
+                <th class="text-left px-5 py-3 font-semibold text-emerald-300 dark:text-emerald-300 text-emerald-700">Training Relevance</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 dark:divide-white/5 divide-gray-100">
+              <tr class="hover:bg-emerald-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Prompts & Completions</td>
+                <td class="px-5 py-3"><code class="font-mono text-xs bg-emerald-500/10 px-1.5 py-0.5 rounded">LLM span</code> inputs/outputs</td>
+                <td class="px-5 py-3"><span class="text-emerald-400">★★★</span> Direct SFT pairs</td>
+              </tr>
+              <tr class="hover:bg-emerald-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Tool Calls</td>
+                <td class="px-5 py-3"><code class="font-mono text-xs bg-emerald-500/10 px-1.5 py-0.5 rounded">TOOL span</code> with args + result</td>
+                <td class="px-5 py-3"><span class="text-emerald-400">★★★</span> Function calling fidelity</td>
+              </tr>
+              <tr class="hover:bg-emerald-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Token Usage</td>
+                <td class="px-5 py-3"><code class="font-mono text-xs bg-emerald-500/10 px-1.5 py-0.5 rounded">span.attributes</code> token counts</td>
+                <td class="px-5 py-3"><span class="text-yellow-400">★★☆</span> Cost analysis only</td>
+              </tr>
+              <tr class="hover:bg-emerald-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Latency</td>
+                <td class="px-5 py-3"><code class="font-mono text-xs bg-emerald-500/10 px-1.5 py-0.5 rounded">span.start_time → end_time</code></td>
+                <td class="px-5 py-3"><span class="text-yellow-400">★★☆</span> Perf gating signal</td>
+              </tr>
+              <tr class="hover:bg-emerald-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Errors</td>
+                <td class="px-5 py-3"><code class="font-mono text-xs bg-emerald-500/10 px-1.5 py-0.5 rounded">span.status = ERROR</code></td>
+                <td class="px-5 py-3"><span class="text-red-400">★☆☆</span> Negative examples (DPO)</td>
+              </tr>
+              <tr class="hover:bg-emerald-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Reasoning Chains</td>
+                <td class="px-5 py-3"><code class="font-mono text-xs bg-emerald-500/10 px-1.5 py-0.5 rounded">CHAIN span</code> parent→child tree</td>
+                <td class="px-5 py-3"><span class="text-emerald-400">★★★</span> Multi-turn trajectories</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <button onclick="explainSimpler('What data does MLflow capture and why does each matter for training?')" class="mt-2 text-xs px-3 py-1.5 rounded-lg glass glass-hover text-emerald-400 hover:text-emerald-300 transition-all duration-200 cursor-pointer">
+        💡 Explain Simpler
+      </button>
+    </section>
+
+    <!-- Section 2: Code Example -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-teal-300 dark:text-teal-300 text-teal-700 flex items-center gap-2">
+        <span class="text-3xl">🔍</span> Searching Traces
+      </h2>
+      <div class="code-block glass rounded-2xl overflow-hidden card-glow transition-all duration-300">
+        <div class="flex items-center justify-between px-4 py-2 border-b border-white/10 dark:border-white/10 border-gray-200 bg-teal-500/5">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
+            <span class="w-3 h-3 rounded-full bg-yellow-500/60"></span>
+            <span class="w-3 h-3 rounded-full bg-green-500/60"></span>
+            <span class="text-xs text-gray-500 ml-2 font-mono">trace_search.py</span>
+          </div>
+          <button onclick="copyCode(this)" class="text-xs px-2.5 py-1 rounded-md glass glass-hover text-teal-400 hover:text-teal-300 transition-all duration-200 cursor-pointer flex items-center gap-1">
+            <span>📋</span> <span class="copy-label">Copy</span>
+          </button>
+        </div>
+        <pre class="p-5 overflow-x-auto text-sm leading-relaxed"><code class="font-mono"><span class="text-purple-400">import</span> <span class="text-teal-300">mlflow</span>
+
+<span class="text-gray-500"># Connect to MLflow on RHOAI</span>
+mlflow.<span class="text-yellow-300">set_tracking_uri</span>(<span class="text-emerald-300">"https://mlflow.apps.cluster.example.com"</span>)
+
+<span class="text-gray-500"># Search for successful agent traces from the last 7 days</span>
+traces = mlflow.<span class="text-yellow-300">search_traces</span>(
+    <span class="text-orange-300">experiment_names</span>=[<span class="text-emerald-300">"agentic-continual-learning"</span>],
+    <span class="text-orange-300">filter_string</span>=<span class="text-emerald-300">"status = 'OK' AND timestamp > '2025-05-27'"</span>,
+    <span class="text-orange-300">max_results</span>=<span class="text-cyan-300">500</span>,
+)
+
+<span class="text-gray-500"># Each trace contains a tree of spans</span>
+<span class="text-purple-400">for</span> trace <span class="text-purple-400">in</span> traces:
+    <span class="text-gray-500"># Get the root span (full agent turn)</span>
+    root = trace.<span class="text-yellow-300">data</span>.<span class="text-yellow-300">spans</span>[<span class="text-cyan-300">0</span>]
+    <span class="text-teal-300">print</span>(<span class="text-purple-400">f</span><span class="text-emerald-300">"Trace </span>{trace.<span class="text-yellow-300">info</span>.<span class="text-yellow-300">request_id</span>}<span class="text-emerald-300">: </span>{<span class="text-yellow-300">len</span>(trace.<span class="text-yellow-300">data</span>.<span class="text-yellow-300">spans</span>)}<span class="text-emerald-300"> spans"</span>)
+
+    <span class="text-gray-500"># Extract feedback annotations</span>
+    feedback = mlflow.<span class="text-yellow-300">search_assessments</span>(
+        <span class="text-orange-300">trace_id</span>=trace.<span class="text-yellow-300">info</span>.<span class="text-yellow-300">request_id</span>
+    )
+    <span class="text-purple-400">for</span> fb <span class="text-purple-400">in</span> feedback:
+        <span class="text-teal-300">print</span>(<span class="text-purple-400">f</span><span class="text-emerald-300">"  → </span>{fb.<span class="text-yellow-300">source</span>.<span class="text-yellow-300">source_type</span>}<span class="text-emerald-300">: </span>{fb.<span class="text-yellow-300">name</span>}<span class="text-emerald-300"> = </span>{fb.<span class="text-yellow-300">value</span>}<span class="text-emerald-300">"</span>)</code></pre>
+      </div>
+    </section>
+
+    <!-- Section 3: Feedback System -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-emerald-300 dark:text-emerald-300 text-emerald-700 flex items-center gap-2">
+        <span class="text-3xl">🏷️</span> Feedback (Assessment) Sources
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- HUMAN Card -->
+        <div class="glass rounded-2xl p-5 card-glow transition-all duration-300 hover:scale-[1.02] border-l-4 border-emerald-400">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-2xl">👤</span>
+            <h3 class="font-bold text-emerald-300 dark:text-emerald-300 text-emerald-700">HUMAN</h3>
+          </div>
+          <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600 mb-3">Direct thumbs-up/down or scored feedback from users via the MLflow UI or API.</p>
+          <div class="text-xs space-y-1">
+            <div class="flex justify-between"><span class="text-gray-400">Signal quality</span><span class="text-emerald-400 font-medium">Highest</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Volume</span><span class="text-yellow-400 font-medium">Low</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">DPO use</span><span class="text-emerald-400 font-medium">Ideal</span></div>
+          </div>
+        </div>
+        <!-- LLM_JUDGE Card -->
+        <div class="glass rounded-2xl p-5 card-glow transition-all duration-300 hover:scale-[1.02] border-l-4 border-teal-400">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-2xl">🤖</span>
+            <h3 class="font-bold text-teal-300 dark:text-teal-300 text-teal-700">LLM_JUDGE</h3>
+          </div>
+          <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600 mb-3">Automated evaluation by a frontier model (e.g., Claude Opus) scoring traces on criteria.</p>
+          <div class="text-xs space-y-1">
+            <div class="flex justify-between"><span class="text-gray-400">Signal quality</span><span class="text-teal-400 font-medium">High</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Volume</span><span class="text-emerald-400 font-medium">High</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">DPO use</span><span class="text-teal-400 font-medium">Good (avoid circular)</span></div>
+          </div>
+        </div>
+        <!-- CODE Card -->
+        <div class="glass rounded-2xl p-5 card-glow transition-all duration-300 hover:scale-[1.02] border-l-4 border-cyan-400">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-2xl">⚙️</span>
+            <h3 class="font-bold text-cyan-300 dark:text-cyan-300 text-cyan-700">CODE</h3>
+          </div>
+          <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600 mb-3">Programmatic assertions — regex checks, JSON schema validation, tool-call correctness.</p>
+          <div class="text-xs space-y-1">
+            <div class="flex justify-between"><span class="text-gray-400">Signal quality</span><span class="text-cyan-400 font-medium">Deterministic</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Volume</span><span class="text-emerald-400 font-medium">High</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">DPO use</span><span class="text-cyan-400 font-medium">Binary pass/fail</span></div>
+          </div>
+        </div>
+      </div>
+      <button onclick="explainSimpler('What are the three feedback source types in MLflow and how do they differ?')" class="mt-2 text-xs px-3 py-1.5 rounded-lg glass glass-hover text-emerald-400 hover:text-emerald-300 transition-all duration-200 cursor-pointer">
+        💡 Explain Simpler
+      </button>
+    </section>
+
+    <!-- Section 4: Bridge Analysis -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-teal-300 dark:text-teal-300 text-teal-700 flex items-center gap-2">
+        <span class="text-3xl">🔗</span> Bridge: Eval-Harness → MLflow Feedback
+      </h2>
+      <div class="glass rounded-2xl overflow-hidden card-glow transition-all duration-300">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-white/10 dark:border-white/10 border-gray-200 bg-teal-500/10">
+                <th class="text-left px-5 py-3 font-semibold text-teal-300 dark:text-teal-300 text-teal-700">Eval-Harness Judge</th>
+                <th class="text-left px-5 py-3 font-semibold text-teal-300 dark:text-teal-300 text-teal-700">MLflow Feedback Type</th>
+                <th class="text-left px-5 py-3 font-semibold text-teal-300 dark:text-teal-300 text-teal-700">Source</th>
+                <th class="text-left px-5 py-3 font-semibold text-teal-300 dark:text-teal-300 text-teal-700">Value Schema</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 dark:divide-white/5 divide-gray-100">
+              <tr class="hover:bg-teal-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium font-mono text-xs">llm_judge (rubric)</td>
+                <td class="px-5 py-3">Assessment</td>
+                <td class="px-5 py-3"><code class="bg-teal-500/10 px-1.5 py-0.5 rounded text-xs">LLM_JUDGE</code></td>
+                <td class="px-5 py-3 font-mono text-xs">{"score": 0-5, "rationale": "..."}</td>
+              </tr>
+              <tr class="hover:bg-teal-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium font-mono text-xs">exact_match</td>
+                <td class="px-5 py-3">Assessment</td>
+                <td class="px-5 py-3"><code class="bg-cyan-500/10 px-1.5 py-0.5 rounded text-xs">CODE</code></td>
+                <td class="px-5 py-3 font-mono text-xs">{"pass": true/false}</td>
+              </tr>
+              <tr class="hover:bg-teal-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium font-mono text-xs">regex_match</td>
+                <td class="px-5 py-3">Assessment</td>
+                <td class="px-5 py-3"><code class="bg-cyan-500/10 px-1.5 py-0.5 rounded text-xs">CODE</code></td>
+                <td class="px-5 py-3 font-mono text-xs">{"pass": true/false}</td>
+              </tr>
+              <tr class="hover:bg-teal-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium font-mono text-xs">human_review</td>
+                <td class="px-5 py-3">Assessment</td>
+                <td class="px-5 py-3"><code class="bg-emerald-500/10 px-1.5 py-0.5 rounded text-xs">HUMAN</code></td>
+                <td class="px-5 py-3 font-mono text-xs">{"score": 1-5, "comment": "..."}</td>
+              </tr>
+              <tr class="hover:bg-teal-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium font-mono text-xs">safety_check</td>
+                <td class="px-5 py-3">Assessment</td>
+                <td class="px-5 py-3"><code class="bg-teal-500/10 px-1.5 py-0.5 rounded text-xs">LLM_JUDGE</code></td>
+                <td class="px-5 py-3 font-mono text-xs">{"safe": true/false, "category": "..."}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: The Critical Gap -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-rose-400 dark:text-rose-400 text-rose-600 flex items-center gap-2">
+        <span class="text-3xl">⚠️</span> The Critical Gap: Trace Schema vs Training Data
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Trace Schema -->
+        <div class="glass rounded-2xl p-5 border-t-4 border-teal-400 card-glow transition-all duration-300 hover:scale-[1.01]">
+          <h3 class="font-bold text-teal-300 dark:text-teal-300 text-teal-700 mb-3 flex items-center gap-2">
+            <span>🌲</span> MLflow Trace Schema
+          </h3>
+          <div class="font-mono text-xs space-y-1 bg-black/20 dark:bg-black/20 bg-gray-100 rounded-lg p-4">
+            <div class="text-gray-400">// OpenTelemetry hierarchical spans</div>
+            <div>{</div>
+            <div class="pl-4"><span class="text-teal-300">"trace_id"</span>: <span class="text-emerald-300">"abc123"</span>,</div>
+            <div class="pl-4"><span class="text-teal-300">"spans"</span>: [</div>
+            <div class="pl-8">{ <span class="text-teal-300">"span_type"</span>: <span class="text-emerald-300">"CHAIN"</span>,</div>
+            <div class="pl-10"><span class="text-teal-300">"children"</span>: [</div>
+            <div class="pl-12">{ <span class="text-teal-300">"span_type"</span>: <span class="text-emerald-300">"LLM"</span>,</div>
+            <div class="pl-14"><span class="text-teal-300">"inputs"</span>: { <span class="text-gray-500">messages[]</span> },</div>
+            <div class="pl-14"><span class="text-teal-300">"outputs"</span>: { <span class="text-gray-500">choices[]</span> } },</div>
+            <div class="pl-12">{ <span class="text-teal-300">"span_type"</span>: <span class="text-emerald-300">"TOOL"</span>,</div>
+            <div class="pl-14"><span class="text-teal-300">"inputs"</span>: { <span class="text-gray-500">tool, args</span> },</div>
+            <div class="pl-14"><span class="text-teal-300">"outputs"</span>: { <span class="text-gray-500">result</span> } }</div>
+            <div class="pl-10">] }</div>
+            <div class="pl-8">]</div>
+            <div class="pl-4">]</div>
+            <div>}</div>
+          </div>
+          <p class="text-xs text-gray-400 mt-3">Nested tree of spans with rich metadata. Powerful for observability, but not directly trainable.</p>
+        </div>
+        <!-- Training Format -->
+        <div class="glass rounded-2xl p-5 border-t-4 border-amber-400 card-glow transition-all duration-300 hover:scale-[1.01]">
+          <h3 class="font-bold text-amber-300 dark:text-amber-300 text-amber-700 mb-3 flex items-center gap-2">
+            <span>📄</span> Training Data Format
+          </h3>
+          <div class="font-mono text-xs space-y-1 bg-black/20 dark:bg-black/20 bg-gray-100 rounded-lg p-4">
+            <div class="text-gray-400">// Flat JSONL — one row per example</div>
+            <div>{</div>
+            <div class="pl-4"><span class="text-amber-300">"messages"</span>: [</div>
+            <div class="pl-8">{ <span class="text-amber-300">"role"</span>: <span class="text-emerald-300">"system"</span>,</div>
+            <div class="pl-10"><span class="text-amber-300">"content"</span>: <span class="text-emerald-300">"You are..."</span> },</div>
+            <div class="pl-8">{ <span class="text-amber-300">"role"</span>: <span class="text-emerald-300">"user"</span>,</div>
+            <div class="pl-10"><span class="text-amber-300">"content"</span>: <span class="text-emerald-300">"Fix the bug"</span> },</div>
+            <div class="pl-8">{ <span class="text-amber-300">"role"</span>: <span class="text-emerald-300">"assistant"</span>,</div>
+            <div class="pl-10"><span class="text-amber-300">"content"</span>: <span class="text-emerald-300">"I'll..."</span>,</div>
+            <div class="pl-10"><span class="text-amber-300">"tool_calls"</span>: [<span class="text-gray-500">...</span>] }</div>
+            <div class="pl-4">]</div>
+            <div>}</div>
+          </div>
+          <p class="text-xs text-gray-400 mt-3">Flat message arrays needed by transformers training. The tree must be linearized and segmented.</p>
+        </div>
+      </div>
+      <div class="glass rounded-xl p-4 border-l-4 border-rose-400 bg-rose-500/5">
+        <p class="text-sm text-rose-300 dark:text-rose-300 text-rose-700 font-medium">
+          🚨 No existing tool bridges this gap. The <code class="font-mono bg-rose-500/10 px-1 rounded">trace-to-training</code> converter is the single most critical piece of glue code required.
+        </p>
+      </div>
+      <button onclick="explainSimpler('Why is there a gap between MLflow traces and training data, and why does it matter?')" class="mt-2 text-xs px-3 py-1.5 rounded-lg glass glass-hover text-emerald-400 hover:text-emerald-300 transition-all duration-200 cursor-pointer">
+        💡 Explain Simpler
+      </button>
+    </section>
+
+    <!-- Section 6: Conversion Requirements -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-emerald-300 dark:text-emerald-300 text-emerald-700 flex items-center gap-2">
+        <span class="text-3xl">🔄</span> Conversion Requirements by Training Objective
+      </h2>
+      <div class="glass rounded-2xl overflow-hidden card-glow transition-all duration-300">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-white/10 dark:border-white/10 border-gray-200 bg-emerald-500/10">
+                <th class="text-left px-5 py-3 font-semibold text-emerald-300 dark:text-emerald-300 text-emerald-700">Format</th>
+                <th class="text-left px-5 py-3 font-semibold text-emerald-300 dark:text-emerald-300 text-emerald-700">Requires</th>
+                <th class="text-left px-5 py-3 font-semibold text-emerald-300 dark:text-emerald-300 text-emerald-700">Gap from MLflow Traces</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 dark:divide-white/5 divide-gray-100">
+              <tr class="hover:bg-emerald-500/5 transition-colors">
+                <td class="px-5 py-3">
+                  <span class="font-bold text-emerald-400">SFT</span>
+                  <div class="text-xs text-gray-500">Supervised Fine-Tuning</div>
+                </td>
+                <td class="px-5 py-3 text-xs">
+                  <code class="font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">messages[]</code> array with <code class="font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">system</code> / <code class="font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">user</code> / <code class="font-mono bg-emerald-500/10 px-1.5 py-0.5 rounded">assistant</code> roles
+                </td>
+                <td class="px-5 py-3 text-xs">
+                  <span class="text-amber-400">Medium:</span> Span tree → flat message array. Tool calls must be serialized into assistant turns. Multi-turn boundaries unclear.
+                </td>
+              </tr>
+              <tr class="hover:bg-emerald-500/5 transition-colors">
+                <td class="px-5 py-3">
+                  <span class="font-bold text-teal-400">DPO</span>
+                  <div class="text-xs text-gray-500">Direct Preference Optimization</div>
+                </td>
+                <td class="px-5 py-3 text-xs">
+                  <code class="font-mono bg-teal-500/10 px-1.5 py-0.5 rounded">prompt</code> + <code class="font-mono bg-teal-500/10 px-1.5 py-0.5 rounded">chosen</code> + <code class="font-mono bg-teal-500/10 px-1.5 py-0.5 rounded">rejected</code> completion pairs
+                </td>
+                <td class="px-5 py-3 text-xs">
+                  <span class="text-red-400">Large:</span> Need paired traces for same input with different quality. Requires judge scores to rank, then pairing logic. No existing tooling.
+                </td>
+              </tr>
+              <tr class="hover:bg-emerald-500/5 transition-colors">
+                <td class="px-5 py-3">
+                  <span class="font-bold text-cyan-400">GRPO</span>
+                  <div class="text-xs text-gray-500">Group Relative Policy Optimization</div>
+                </td>
+                <td class="px-5 py-3 text-xs">
+                  <code class="font-mono bg-cyan-500/10 px-1.5 py-0.5 rounded">prompt</code> + <code class="font-mono bg-cyan-500/10 px-1.5 py-0.5 rounded">completions[]</code> group (N samples) + reward per completion
+                </td>
+                <td class="px-5 py-3 text-xs">
+                  <span class="text-red-400">Large:</span> Need N completions per prompt. Requires either re-generation or grouping production traces by input hash. Reward function must be extractable.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 7: MLflow on RHOAI Auth Flow -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-teal-300 dark:text-teal-300 text-teal-700 flex items-center gap-2">
+        <span class="text-3xl">🔐</span> MLflow on RHOAI: Authentication Flow
+      </h2>
+      <div class="glass rounded-2xl p-6 card-glow transition-all duration-300">
+        <div class="mermaid" id="auth-diagram">
+sequenceDiagram
+    participant Pod as Agent Pod
+    participant SC as OAuth Sidecar
+    participant MLflow as MLflow Server
+    participant OCP as OpenShift OAuth
+
+    Pod->>SC: HTTP request to MLflow API<br/>(no auth header)
+    SC->>SC: Check for valid session cookie
+    alt No valid session
+        SC->>OCP: Request SA token exchange
+        OCP-->>SC: OAuth2 access token
+        SC->>SC: Cache token + set session cookie
+    end
+    SC->>MLflow: Forward request<br/>+ Authorization: Bearer {token}
+    MLflow-->>SC: Response (traces, experiments, etc.)
+    SC-->>Pod: Response (transparent proxy)
+
+    Note over Pod,MLflow: The sidecar pattern means the agent code<br/>never handles auth tokens directly
+        </div>
+        <p class="text-sm text-gray-400 mt-4">
+          The OAuth sidecar proxy handles Service Account token exchange transparently, so agent pods can use MLflow APIs without credential management.
+        </p>
+      </div>
+      <button onclick="explainSimpler('How does MLflow authentication work on RHOAI with the sidecar pattern?')" class="mt-2 text-xs px-3 py-1.5 rounded-lg glass glass-hover text-emerald-400 hover:text-emerald-300 transition-all duration-200 cursor-pointer">
+        💡 Explain Simpler
+      </button>
+    </section>
+
+    <!-- Section 8: Model Registry -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-emerald-300 dark:text-emerald-300 text-emerald-700 flex items-center gap-2">
+        <span class="text-3xl">📦</span> MLflow Model Registry
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="glass rounded-2xl p-5 card-glow transition-all duration-300 hover:scale-[1.01]">
+          <h3 class="font-bold text-emerald-300 mb-3">✅ Capabilities</h3>
+          <ul class="space-y-2 text-sm text-gray-300 dark:text-gray-300 text-gray-600">
+            <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span> Version tracking with aliases (champion / challenger)</li>
+            <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span> Model lineage: training run → registered model → deployed endpoint</li>
+            <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span> Artifact storage (model weights, configs, tokenizer)</li>
+            <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span> Stage transitions (None → Staging → Production → Archived)</li>
+            <li class="flex items-start gap-2"><span class="text-emerald-400 mt-0.5">✓</span> Integration with KServe for serving</li>
+          </ul>
+        </div>
+        <div class="glass rounded-2xl p-5 card-glow transition-all duration-300 hover:scale-[1.01]">
+          <h3 class="font-bold text-rose-400 mb-3">❌ Gap: Compression-Chain Lineage</h3>
+          <ul class="space-y-2 text-sm text-gray-300 dark:text-gray-300 text-gray-600">
+            <li class="flex items-start gap-2"><span class="text-rose-400 mt-0.5">✗</span> No native concept of "model A was distilled from model B"</li>
+            <li class="flex items-start gap-2"><span class="text-rose-400 mt-0.5">✗</span> Cannot track progressive compression chains (Opus → Llama 70B → Granite 8B)</li>
+            <li class="flex items-start gap-2"><span class="text-rose-400 mt-0.5">✗</span> No comparison dashboards for compression stages</li>
+            <li class="flex items-start gap-2"><span class="text-rose-400 mt-0.5">✗</span> Workaround: use model tags + custom metadata to encode parent model references</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Page Navigation -->
+    <nav class="flex items-center justify-between pt-8 border-t border-white/10 dark:border-white/10 border-gray-200">
+      <a href="03-inner-loop.html" class="group flex items-center gap-2 glass rounded-xl px-5 py-3 glass-hover transition-all duration-200 hover:scale-[1.02]">
+        <span class="text-lg transition-transform duration-200 group-hover:-translate-x-1">←</span>
+        <div>
+          <div class="text-xs text-gray-500">Previous</div>
+          <div class="text-sm font-medium text-emerald-400">03 — Inner Loop</div>
+        </div>
+      </a>
+      <a href="05-sprint1.html" class="group flex items-center gap-2 glass rounded-xl px-5 py-3 glass-hover transition-all duration-200 hover:scale-[1.02]">
+        <div class="text-right">
+          <div class="text-xs text-gray-500">Next</div>
+          <div class="text-sm font-medium text-emerald-400">05 — Sprint 1</div>
+        </div>
+        <span class="text-lg transition-transform duration-200 group-hover:translate-x-1">→</span>
+      </a>
+    </nav>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-center text-xs text-gray-600">
+    Agentic Continual Learning Architecture — Knowledge Base
+  </footer>
+
+  <script>
+    // Mark page as visited
+    (function() {
+      const visited = JSON.parse(localStorage.getItem('teach-me-visited') || '{}');
+      visited['04-mlflow-bridge'] = { at: new Date().toISOString(), count: (visited['04-mlflow-bridge']?.count || 0) + 1 };
+      localStorage.setItem('teach-me-visited', JSON.stringify(visited));
+      document.getElementById('visitBadge').classList.remove('hidden');
+    })();
+
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const icon = document.getElementById('themeIcon');
+      html.classList.toggle('dark');
+      icon.textContent = html.classList.contains('dark') ? '🌙' : '☀️';
+      localStorage.setItem('teach-me-theme', html.classList.contains('dark') ? 'dark' : 'light');
+    }
+    (function() {
+      const saved = localStorage.getItem('teach-me-theme');
+      if (saved === 'light') { document.documentElement.classList.remove('dark'); document.getElementById('themeIcon').textContent = '☀️'; }
+    })();
+
+    // Copy code
+    function copyCode(btn) {
+      const pre = btn.closest('.code-block').querySelector('pre code');
+      const text = pre.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const label = btn.querySelector('.copy-label');
+        label.textContent = 'Copied!';
+        setTimeout(() => { label.textContent = 'Copy'; }, 2000);
+      });
+    }
+
+    // Explain Simpler
+    async function explainSimpler(question) {
+      try {
+        const res = await fetch('http://localhost:3847/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question, context: 'MLflow as Shared Data Plane — Agentic Continual Learning Architecture' })
+        });
+        if (!res.ok) throw new Error('Server error');
+        const data = await res.json();
+        alert(data.answer || 'Explanation received — check the console for details.');
+      } catch (e) {
+        alert('Could not reach the explanation server. Make sure localhost:3847 is running.');
+      }
+    }
+
+    // Initialize Mermaid
+    mermaid.initialize({ theme: 'dark', startOnLoad: true, securityLevel: 'loose', sequence: { mirrorActors: false } });
+  </script>
+</body>
+</html>

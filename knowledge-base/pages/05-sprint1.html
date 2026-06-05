@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sprint 1 Assessment — Agentic Continual Learning</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], mono: ['Fira Code', 'monospace'] },
+        }
+      }
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); }
+    .glass-hover:hover { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.15); }
+    html:not(.dark) .glass { background: rgba(255,255,255,0.65); border-color: rgba(0,0,0,0.08); }
+    html:not(.dark) .glass-hover:hover { background: rgba(255,255,255,0.80); }
+    .card-glow:hover { box-shadow: 0 0 30px rgba(245,158,11,0.12); }
+    .fade-in { animation: fadeIn 0.5s ease-out; }
+    .stagger-1 { animation-delay: 0.1s; }
+    .stagger-2 { animation-delay: 0.2s; }
+    .stagger-3 { animation-delay: 0.3s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .traffic-light { width: 1rem; height: 1rem; border-radius: 50%; display: inline-block; }
+    .tl-red { background: #ef4444; box-shadow: 0 0 12px rgba(239,68,68,0.5); }
+    .tl-amber { background: #f59e0b; box-shadow: 0 0 12px rgba(245,158,11,0.5); }
+    .tl-green { background: #22c55e; box-shadow: 0 0 12px rgba(34,197,94,0.5); }
+    details summary { cursor: pointer; list-style: none; }
+    details summary::-webkit-details-marker { display: none; }
+    details[open] .chevron { transform: rotate(90deg); }
+    .quiz-overlay { display: none; }
+    .quiz-overlay.active { display: flex; }
+  </style>
+</head>
+<body class="bg-gray-950 dark:bg-gray-950 bg-gray-50 text-gray-100 dark:text-gray-100 text-gray-900 font-sans min-h-screen transition-colors duration-300">
+
+  <!-- Sticky Navbar -->
+  <nav class="sticky top-0 z-50 glass border-b border-white/10 dark:border-white/10 border-gray-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2 text-sm">
+        <a href="../index.html" class="text-amber-400 hover:text-amber-300 transition-colors">🏠 Home</a>
+        <span class="text-gray-500">/</span>
+        <span class="text-gray-400 dark:text-gray-400 text-gray-600">Pages</span>
+        <span class="text-gray-500">/</span>
+        <span class="text-amber-300 dark:text-amber-300 text-amber-700 font-medium">05 — Sprint 1 Assessment</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="visitBadge" class="hidden text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">✓ Visited</span>
+        <button onclick="toggleTheme()" class="p-2 rounded-lg glass glass-hover transition-all duration-200 hover:scale-105" title="Toggle theme">
+          <span id="themeIcon" class="text-lg">🌙</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-10 fade-in">
+
+    <!-- Page Header -->
+    <header class="text-center space-y-4">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full glass text-amber-400 text-xs font-medium tracking-wider uppercase">
+        <span>Module 05</span>
+        <span class="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse"></span>
+        <span>Sprint Planning</span>
+      </div>
+      <h1 class="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-amber-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent leading-tight">
+        Sprint 1 Assessment
+      </h1>
+      <p class="text-lg text-gray-400 dark:text-gray-400 text-gray-600 max-w-2xl mx-auto">
+        Readiness check for three sprint goals — where we stand, what's blocked, and what to do about it.
+      </p>
+    </header>
+
+    <!-- 3 Goal Status Cards -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-amber-300 dark:text-amber-300 text-amber-700 flex items-center gap-2">
+        <span class="text-3xl">🎯</span> Sprint Goals at a Glance
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <!-- Goal 1 -->
+        <div class="glass rounded-2xl p-6 card-glow transition-all duration-300 hover:scale-[1.02] border-t-4 border-amber-400 stagger-1 fade-in">
+          <div class="flex items-center justify-between mb-4">
+            <span class="traffic-light tl-amber" title="Amber — Partially Blocked"></span>
+            <span class="text-xs font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">AMBER</span>
+          </div>
+          <h3 class="text-xl font-bold text-white dark:text-white text-gray-900 mb-2">Goal 1</h3>
+          <p class="text-lg font-semibold text-amber-300 dark:text-amber-300 text-amber-700 mb-3">Baseline Benchmark</p>
+          <p class="text-sm text-gray-400 dark:text-gray-400 text-gray-600">
+            Establish performance baseline of frontier model (Claude Opus) on target agent skills via eval-harness.
+          </p>
+          <div class="mt-4 pt-3 border-t border-white/5 dark:border-white/5 border-gray-200">
+            <span class="text-xs text-amber-400 font-medium">⚡ Partially blocked — skill selection pending</span>
+          </div>
+        </div>
+        <!-- Goal 2 -->
+        <div class="glass rounded-2xl p-6 card-glow transition-all duration-300 hover:scale-[1.02] border-t-4 border-red-400 stagger-2 fade-in">
+          <div class="flex items-center justify-between mb-4">
+            <span class="traffic-light tl-red" title="Red — Multiple Unknowns"></span>
+            <span class="text-xs font-mono bg-red-500/20 text-red-300 px-2 py-0.5 rounded-full">RED</span>
+          </div>
+          <h3 class="text-xl font-bold text-white dark:text-white text-gray-900 mb-2">Goal 2</h3>
+          <p class="text-lg font-semibold text-red-300 dark:text-red-300 text-red-700 mb-3">Fine-Tuned Benchmark</p>
+          <p class="text-sm text-gray-400 dark:text-gray-400 text-gray-600">
+            Run first fine-tune pass on open-weight model and benchmark against baseline.
+          </p>
+          <div class="mt-4 pt-3 border-t border-white/5 dark:border-white/5 border-gray-200">
+            <span class="text-xs text-red-400 font-medium">🔴 Multiple unknowns — FT objective, data, compute</span>
+          </div>
+        </div>
+        <!-- Goal 3 -->
+        <div class="glass rounded-2xl p-6 card-glow transition-all duration-300 hover:scale-[1.02] border-t-4 border-amber-400 stagger-3 fade-in">
+          <div class="flex items-center justify-between mb-4">
+            <span class="traffic-light tl-amber" title="Amber — Design Needed"></span>
+            <span class="text-xs font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">AMBER</span>
+          </div>
+          <h3 class="text-xl font-bold text-white dark:text-white text-gray-900 mb-2">Goal 3</h3>
+          <p class="text-lg font-semibold text-amber-300 dark:text-amber-300 text-amber-700 mb-3">Reference Architecture</p>
+          <p class="text-sm text-gray-400 dark:text-gray-400 text-gray-600">
+            Produce a deployable reference architecture for the end-to-end continual learning pipeline.
+          </p>
+          <div class="mt-4 pt-3 border-t border-white/5 dark:border-white/5 border-gray-200">
+            <span class="text-xs text-amber-400 font-medium">⚡ Design needed — component integration unclear</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Goal 1 Deep Dive -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-amber-300 dark:text-amber-300 text-amber-700 flex items-center gap-2">
+        <span class="text-3xl">1️⃣</span> Goal 1 Deep Dive: Baseline Benchmark
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="glass rounded-2xl p-5 card-glow transition-all duration-300">
+          <h3 class="font-bold text-emerald-400 mb-3 flex items-center gap-2">✅ What's Clear</h3>
+          <ul class="space-y-2 text-sm text-gray-300 dark:text-gray-300 text-gray-600">
+            <li class="flex items-start gap-2"><span class="text-emerald-400">✓</span> Eval-harness infrastructure is functional and tested</li>
+            <li class="flex items-start gap-2"><span class="text-emerald-400">✓</span> Claude Opus API access confirmed</li>
+            <li class="flex items-start gap-2"><span class="text-emerald-400">✓</span> MLflow experiment tracking configured on RHOAI</li>
+            <li class="flex items-start gap-2"><span class="text-emerald-400">✓</span> Judge framework supports LLM_JUDGE and CODE types</li>
+            <li class="flex items-start gap-2"><span class="text-emerald-400">✓</span> eval.yaml schema can encode skill benchmarks</li>
+          </ul>
+        </div>
+        <div class="glass rounded-2xl p-5 card-glow transition-all duration-300">
+          <h3 class="font-bold text-amber-400 mb-3 flex items-center gap-2">⚠️ What's Blocked</h3>
+          <ul class="space-y-2 text-sm text-gray-300 dark:text-gray-300 text-gray-600">
+            <li class="flex items-start gap-2"><span class="text-amber-400">⏸</span> Which skill(s) to benchmark first — needs stakeholder input</li>
+            <li class="flex items-start gap-2"><span class="text-amber-400">⏸</span> Test dataset construction — no curated inputs exist yet</li>
+            <li class="flex items-start gap-2"><span class="text-amber-400">⏸</span> Judge calibration — no human baseline for rubric validation</li>
+            <li class="flex items-start gap-2"><span class="text-amber-400">⏸</span> Eval reliability — single-run variance unknown</li>
+          </ul>
+        </div>
+      </div>
+      <div class="glass rounded-xl p-4 border-l-4 border-amber-400 bg-amber-500/5">
+        <p class="text-sm font-medium text-amber-300 dark:text-amber-300 text-amber-700 mb-1">📋 Recommendation</p>
+        <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">
+          Start with <strong>one well-understood skill</strong> (e.g., Jenkins triage or Jira issue creation) that has existing production traces. Run 3x eval passes to establish variance, calibrate judges against manual review, and lock the benchmark before moving to Goal 2.
+        </p>
+      </div>
+      <button onclick="explainSimpler('What is Goal 1 about and why is it partially blocked?')" class="mt-2 text-xs px-3 py-1.5 rounded-lg glass glass-hover text-amber-400 hover:text-amber-300 transition-all duration-200 cursor-pointer">
+        💡 Explain Simpler
+      </button>
+    </section>
+
+    <!-- Goal 2 Deep Dive -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-red-300 dark:text-red-300 text-red-700 flex items-center gap-2">
+        <span class="text-3xl">2️⃣</span> Goal 2 Deep Dive: Fine-Tuned Benchmark
+      </h2>
+      <div class="glass rounded-2xl overflow-hidden card-glow transition-all duration-300">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-white/10 dark:border-white/10 border-gray-200 bg-red-500/10">
+                <th class="text-left px-5 py-3 font-semibold text-red-300 dark:text-red-300 text-red-700">Open Question</th>
+                <th class="text-left px-5 py-3 font-semibold text-red-300 dark:text-red-300 text-red-700">Options</th>
+                <th class="text-left px-5 py-3 font-semibold text-red-300 dark:text-red-300 text-red-700">Impact</th>
+                <th class="text-left px-5 py-3 font-semibold text-red-300 dark:text-red-300 text-red-700">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 dark:divide-white/5 divide-gray-100">
+              <tr class="hover:bg-red-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">FT Objective</td>
+                <td class="px-5 py-3 text-xs">SFT (simplest) vs DPO (needs pairs) vs GRPO (needs groups)</td>
+                <td class="px-5 py-3 text-xs text-red-300">Determines data pipeline complexity</td>
+                <td class="px-5 py-3"><span class="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded-full">Undecided</span></td>
+              </tr>
+              <tr class="hover:bg-red-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Data Source</td>
+                <td class="px-5 py-3 text-xs">Production traces vs synthetic generation vs manual curation</td>
+                <td class="px-5 py-3 text-xs text-red-300">Volume and quality tradeoff</td>
+                <td class="px-5 py-3"><span class="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded-full">Undecided</span></td>
+              </tr>
+              <tr class="hover:bg-red-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Judge → DPO</td>
+                <td class="px-5 py-3 text-xs">How to convert judge scores to chosen/rejected pairs</td>
+                <td class="px-5 py-3 text-xs text-amber-300">Blocks DPO path entirely</td>
+                <td class="px-5 py-3"><span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">No tooling</span></td>
+              </tr>
+              <tr class="hover:bg-red-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Compute</td>
+                <td class="px-5 py-3 text-xs">Which GPU cluster, quota, node topology</td>
+                <td class="px-5 py-3 text-xs text-amber-300">Determines feasible model size</td>
+                <td class="px-5 py-3"><span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">TBD</span></td>
+              </tr>
+              <tr class="hover:bg-red-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Data Volume</td>
+                <td class="px-5 py-3 text-xs">Minimum viable dataset size for meaningful fine-tuning</td>
+                <td class="px-5 py-3 text-xs text-amber-300">Determines timeline feasibility</td>
+                <td class="px-5 py-3"><span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">Unknown</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="glass rounded-xl p-4 border-l-4 border-red-400 bg-red-500/5">
+        <p class="text-sm font-medium text-red-300 dark:text-red-300 text-red-700 mb-1">📋 Recommendation</p>
+        <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">
+          Start with <strong>SFT as the first FT objective</strong> — it has the simplest data requirements (message arrays only). Use production traces from the chosen skill to generate a small (500–1000 example) dataset. This unblocks the data pipeline work regardless of whether DPO/GRPO is adopted later. Defer compute allocation until data pipeline is proven.
+        </p>
+      </div>
+    </section>
+
+    <!-- Goal 3 Deep Dive -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-amber-300 dark:text-amber-300 text-amber-700 flex items-center gap-2">
+        <span class="text-3xl">3️⃣</span> Goal 3 Deep Dive: Reference Architecture
+      </h2>
+      <div class="glass rounded-2xl overflow-hidden card-glow transition-all duration-300">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-white/10 dark:border-white/10 border-gray-200 bg-amber-500/10">
+                <th class="text-left px-5 py-3 font-semibold text-amber-300 dark:text-amber-300 text-amber-700">Component</th>
+                <th class="text-left px-5 py-3 font-semibold text-amber-300 dark:text-amber-300 text-amber-700">Status</th>
+                <th class="text-left px-5 py-3 font-semibold text-amber-300 dark:text-amber-300 text-amber-700">Blocker</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 dark:divide-white/5 divide-gray-100">
+              <tr class="hover:bg-amber-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Cron Agent</td>
+                <td class="px-5 py-3"><span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">Design needed</span></td>
+                <td class="px-5 py-3 text-xs text-gray-400">How to schedule outer-loop runs. CronJob vs Kagenti AgentCard vs custom operator.</td>
+              </tr>
+              <tr class="hover:bg-amber-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Helm Chart</td>
+                <td class="px-5 py-3"><span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">Not started</span></td>
+                <td class="px-5 py-3 text-xs text-gray-400">Depends on component decisions above. Need to scope what goes in chart vs external deps.</td>
+              </tr>
+              <tr class="hover:bg-amber-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">MLflow Integration</td>
+                <td class="px-5 py-3"><span class="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">Available</span></td>
+                <td class="px-5 py-3 text-xs text-gray-400">MLflow on RHOAI deployed. Auth sidecar pattern known. trace-to-training gap remains.</td>
+              </tr>
+              <tr class="hover:bg-amber-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Skill Choice</td>
+                <td class="px-5 py-3"><span class="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded-full">Undecided</span></td>
+                <td class="px-5 py-3 text-xs text-gray-400">Which skill(s) to use for the POC. Needs sufficient production trace volume and clear success criteria.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="glass rounded-xl p-4 border-l-4 border-amber-400 bg-amber-500/5">
+        <p class="text-sm font-medium text-amber-300 dark:text-amber-300 text-amber-700 mb-1">📋 Recommendation</p>
+        <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">
+          Draft the reference architecture as a <strong>Mermaid diagram + component spec</strong> first — don't jump to Helm charts. Resolve the scheduling question (CronJob vs AgentCard) by testing both in a dev namespace. Pick the skill with highest trace volume.
+        </p>
+      </div>
+    </section>
+
+    <!-- Cross-Cutting Concerns -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-orange-300 dark:text-orange-300 text-orange-700 flex items-center gap-2">
+        <span class="text-3xl">🔀</span> Cross-Cutting Concerns
+      </h2>
+      <!-- Loop Interference Warning -->
+      <div class="glass rounded-xl p-5 border-l-4 border-red-400 bg-red-500/5 card-glow transition-all duration-300">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xl">🚨</span>
+          <h3 class="font-bold text-red-300 dark:text-red-300 text-red-700">Loop Interference</h3>
+          <span class="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded-full ml-auto">WARNING</span>
+        </div>
+        <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600 mb-3">
+          If both loops (outer prompt optimization + inner weight optimization) run simultaneously, they can fight each other. The outer loop optimizes prompts for the <em>current</em> model weights — but if the inner loop changes those weights, the optimized prompts may become suboptimal or harmful.
+        </p>
+        <div class="bg-black/20 dark:bg-black/20 bg-gray-100 rounded-lg p-3 text-sm text-gray-400">
+          <strong class="text-red-300 dark:text-red-300 text-red-700">Mitigation:</strong> Version-lock the model checkpoint when running outer-loop eval passes. Never run both loops against the same model version simultaneously. Gate weight updates on eval regression checks.
+        </div>
+      </div>
+      <!-- Eval Reliability Info -->
+      <div class="glass rounded-xl p-5 border-l-4 border-blue-400 bg-blue-500/5 card-glow transition-all duration-300">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xl">ℹ️</span>
+          <h3 class="font-bold text-blue-300 dark:text-blue-300 text-blue-700">Eval Reliability Protocol</h3>
+          <span class="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full ml-auto">INFO</span>
+        </div>
+        <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600 mb-3">
+          LLM judge scores have inherent variance (temperature, prompt sensitivity, model mood). A single eval run is not reliable enough to make training decisions.
+        </p>
+        <div class="bg-black/20 dark:bg-black/20 bg-gray-100 rounded-lg p-3">
+          <p class="text-sm font-medium text-blue-300 dark:text-blue-300 text-blue-700 mb-1">Recommended protocol:</p>
+          <div class="flex items-center gap-3 text-sm text-gray-300 dark:text-gray-300 text-gray-600">
+            <span class="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-lg font-mono text-xs">3x runs</span>
+            <span>→</span>
+            <span class="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-lg font-mono text-xs">median score</span>
+            <span>→</span>
+            <span class="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-lg font-mono text-xs">report variance</span>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">If variance across 3 runs exceeds 15%, investigate the judge prompt or increase sample size.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quiz Section -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-yellow-300 dark:text-yellow-300 text-yellow-700 flex items-center gap-2">
+        <span class="text-3xl">🧠</span> Knowledge Check
+      </h2>
+      <div class="glass rounded-2xl p-6 card-glow transition-all duration-300" id="quizCard">
+        <p class="text-lg font-medium text-white dark:text-white text-gray-900 mb-4">
+          Why should judges run on Claude Opus 6 even when testing an openweight model?
+        </p>
+        <div class="space-y-3" id="quizOptions">
+          <button onclick="checkQuiz(this, false)" class="w-full text-left glass glass-hover rounded-xl px-5 py-3 text-sm transition-all duration-200 hover:scale-[1.01] cursor-pointer">
+            <span class="font-mono text-amber-400 mr-2">A)</span> Claude Opus 6 is faster than open models
+          </button>
+          <button onclick="checkQuiz(this, false)" class="w-full text-left glass glass-hover rounded-xl px-5 py-3 text-sm transition-all duration-200 hover:scale-[1.01] cursor-pointer">
+            <span class="font-mono text-amber-400 mr-2">B)</span> It's cheaper to use a hosted API for judging
+          </button>
+          <button onclick="checkQuiz(this, true)" class="w-full text-left glass glass-hover rounded-xl px-5 py-3 text-sm transition-all duration-200 hover:scale-[1.01] cursor-pointer">
+            <span class="font-mono text-amber-400 mr-2">C)</span> To avoid circular evaluation — a model can't reliably judge its own outputs
+          </button>
+          <button onclick="checkQuiz(this, false)" class="w-full text-left glass glass-hover rounded-xl px-5 py-3 text-sm transition-all duration-200 hover:scale-[1.01] cursor-pointer">
+            <span class="font-mono text-amber-400 mr-2">D)</span> Open models don't support the assessment API
+          </button>
+        </div>
+        <div id="quizResult" class="hidden mt-4 p-4 rounded-xl text-sm"></div>
+      </div>
+    </section>
+
+    <!-- Page Navigation -->
+    <nav class="flex items-center justify-between pt-8 border-t border-white/10 dark:border-white/10 border-gray-200">
+      <a href="04-mlflow-bridge.html" class="group flex items-center gap-2 glass rounded-xl px-5 py-3 glass-hover transition-all duration-200 hover:scale-[1.02]">
+        <span class="text-lg transition-transform duration-200 group-hover:-translate-x-1">←</span>
+        <div>
+          <div class="text-xs text-gray-500">Previous</div>
+          <div class="text-sm font-medium text-amber-400">04 — MLflow Bridge</div>
+        </div>
+      </a>
+      <a href="06-risks.html" class="group flex items-center gap-2 glass rounded-xl px-5 py-3 glass-hover transition-all duration-200 hover:scale-[1.02]">
+        <div class="text-right">
+          <div class="text-xs text-gray-500">Next</div>
+          <div class="text-sm font-medium text-amber-400">06 — Risks & Gaps</div>
+        </div>
+        <span class="text-lg transition-transform duration-200 group-hover:translate-x-1">→</span>
+      </a>
+    </nav>
+
+  </main>
+
+  <footer class="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-center text-xs text-gray-600">
+    Agentic Continual Learning Architecture — Knowledge Base
+  </footer>
+
+  <script>
+    // Mark visited
+    (function() {
+      const visited = JSON.parse(localStorage.getItem('teach-me-visited') || '{}');
+      visited['05-sprint1'] = { at: new Date().toISOString(), count: (visited['05-sprint1']?.count || 0) + 1 };
+      localStorage.setItem('teach-me-visited', JSON.stringify(visited));
+      document.getElementById('visitBadge').classList.remove('hidden');
+    })();
+
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const icon = document.getElementById('themeIcon');
+      html.classList.toggle('dark');
+      icon.textContent = html.classList.contains('dark') ? '🌙' : '☀️';
+      localStorage.setItem('teach-me-theme', html.classList.contains('dark') ? 'dark' : 'light');
+    }
+    (function() {
+      const saved = localStorage.getItem('teach-me-theme');
+      if (saved === 'light') { document.documentElement.classList.remove('dark'); document.getElementById('themeIcon').textContent = '☀️'; }
+    })();
+
+    // Quiz
+    function checkQuiz(btn, correct) {
+      const options = document.querySelectorAll('#quizOptions button');
+      options.forEach(b => { b.disabled = true; b.classList.add('opacity-50'); });
+      btn.classList.remove('opacity-50');
+      const result = document.getElementById('quizResult');
+      result.classList.remove('hidden');
+      if (correct) {
+        btn.style.borderColor = '#22c55e';
+        btn.style.background = 'rgba(34,197,94,0.1)';
+        result.innerHTML = '<span class="text-emerald-400 font-medium">✅ Correct!</span> Using the model-under-test as its own judge creates circular evaluation — the model would rate its own errors as acceptable. A stronger, independent model (Claude Opus 6) provides an unbiased quality signal that can be trusted for preference learning (DPO) and gating decisions.';
+        result.style.background = 'rgba(34,197,94,0.05)';
+        result.style.borderLeft = '4px solid #22c55e';
+      } else {
+        btn.style.borderColor = '#ef4444';
+        btn.style.background = 'rgba(239,68,68,0.1)';
+        result.innerHTML = '<span class="text-red-400 font-medium">❌ Not quite.</span> The key reason is <strong>avoiding circular evaluation</strong>. If the model being tested also judges its own outputs, it will systematically rate its own errors as acceptable — creating a feedback loop that reinforces mistakes rather than correcting them. An independent, stronger model provides unbiased quality signals.';
+        result.style.background = 'rgba(239,68,68,0.05)';
+        result.style.borderLeft = '4px solid #ef4444';
+      }
+    }
+
+    // Explain Simpler
+    async function explainSimpler(question) {
+      try {
+        const res = await fetch('http://localhost:3847/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question, context: 'Sprint 1 Assessment — Agentic Continual Learning Architecture' })
+        });
+        if (!res.ok) throw new Error('Server error');
+        const data = await res.json();
+        alert(data.answer || 'Explanation received — check the console for details.');
+      } catch (e) {
+        alert('Could not reach the explanation server. Make sure localhost:3847 is running.');
+      }
+    }
+  </script>
+</body>
+</html>

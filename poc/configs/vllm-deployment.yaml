@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-qwen-7b
+  namespace: eval-poc
+  labels:
+    app: vllm-qwen-7b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-qwen-7b
+  template:
+    metadata:
+      labels:
+        app: vllm-qwen-7b
+    spec:
+      containers:
+        - name: vllm
+          image: registry.redhat.io/rhaii/vllm-cuda-rhel9@sha256:d3e57d4ca13a17f4d5d1228df4fe47cfe1a9f630250a8b3d26f86d871fdb9e69
+          args:
+            - "--model"
+            - "/models/Qwen2.5-Coder-7B-Instruct"
+            - "--host"
+            - "0.0.0.0"
+            - "--port"
+            - "8000"
+            - "--gpu-memory-utilization"
+            - "0.9"
+            - "--max-model-len"
+            - "16384"
+            - "--enforce-eager"
+            - "--dtype"
+            - "float16"
+            - "--served-model-name"
+            - "qwen-coder-7b"
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          env:
+            - name: HOME
+              value: /tmp/vllm-home
+            - name: HF_HOME
+              value: /tmp/hf-cache
+            - name: VLLM_CACHE_ROOT
+              value: /tmp/vllm-cache
+            - name: VLLM_CONFIG_ROOT
+              value: /tmp/vllm-config
+          volumeMounts:
+            - name: models
+              mountPath: /models
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: "4"
+              memory: "24Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "8"
+              memory: "24Gi"
+              nvidia.com/gpu: "1"
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: model-storage
+        - name: tmp
+          emptyDir:
+            sizeLimit: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-qwen-7b
+  namespace: eval-poc
+spec:
+  selector:
+    app: vllm-qwen-7b
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP

@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outer Loop: Skill Optimization — Agentic Continual Learning</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+</script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['Fira Code', 'monospace'] },
+    }
+  }
+}
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  code, pre { font-family: 'Fira Code', monospace; }
+  .glass { background: rgba(255,255,255,0.04); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); }
+  .glass-strong { background: rgba(255,255,255,0.07); backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.12); }
+  .glow-blue { box-shadow: 0 0 30px rgba(59,130,246,0.15), 0 0 60px rgba(59,130,246,0.05); }
+  .gradient-text { background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .stepper-active { background: linear-gradient(135deg, rgba(59,130,246,0.3), rgba(37,99,235,0.3)); border-color: rgba(96,165,250,0.6); }
+  .stepper-connector { width: 100%; height: 2px; background: linear-gradient(90deg, rgba(59,130,246,0.4), rgba(59,130,246,0.1)); }
+  .flip-card { perspective: 1000px; height: 280px; }
+  .flip-card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.4,0,0.2,1); transform-style: preserve-3d; }
+  .flip-card:hover .flip-card-inner, .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+  .flip-card-front, .flip-card-back { position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; border-radius: 1rem; }
+  .flip-card-back { transform: rotateY(180deg); }
+  .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1), padding 0.3s ease; }
+  .accordion-content.open { max-height: 800px; padding-top: 1rem; padding-bottom: 1rem; }
+  .quiz-option { transition: all 0.3s ease; }
+  .quiz-option:hover { transform: translateX(4px); }
+  .quiz-correct { background: rgba(34,197,94,0.15) !important; border-color: rgba(34,197,94,0.5) !important; }
+  .quiz-wrong { background: rgba(239,68,68,0.15) !important; border-color: rgba(239,68,68,0.5) !important; }
+  .nav-link.visited-page { position: relative; }
+  .nav-link.visited-page::after { content: '✓'; position: absolute; top: -2px; right: -8px; font-size: 10px; color: #34d399; }
+  .hero-glow { background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59,130,246,0.15), transparent); }
+  .table-row-hover { transition: all 0.2s ease; }
+  .table-row-hover:hover { background: rgba(59,130,246,0.08); transform: scale(1.005); }
+  .step-details { max-height: 0; overflow: hidden; transition: max-height 0.5s cubic-bezier(0.4,0,0.2,1); }
+  .step-details.open { max-height: 400px; }
+  @keyframes fadeInUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+  .animate-in { animation: fadeInUp 0.6s ease-out forwards; }
+  .delay-1 { animation-delay: 0.1s; opacity: 0; }
+  .delay-2 { animation-delay: 0.2s; opacity: 0; }
+  .delay-3 { animation-delay: 0.3s; opacity: 0; }
+  .delay-4 { animation-delay: 0.4s; opacity: 0; }
+
+  html:not(.dark) body { background: #f8fafc; color: #1e293b; }
+  html:not(.dark) .glass { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.08); }
+  html:not(.dark) .glass-strong { background: rgba(255,255,255,0.85); border-color: rgba(0,0,0,0.1); }
+  html:not(.dark) .gradient-text { background: linear-gradient(135deg, #2563eb, #1d4ed8); -webkit-background-clip: text; background-clip: text; }
+</style>
+</head>
+<body class="bg-gray-950 text-gray-200 min-h-screen">
+
+<!-- Navbar -->
+<nav class="sticky top-0 z-50 glass-strong border-b border-white/10">
+  <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3 text-sm">
+      <a href="../index.html" class="text-gray-400 hover:text-blue-400 transition-colors">Knowledge Base</a>
+      <span class="text-gray-600">/</span>
+      <span class="text-blue-300 font-medium">02 — Outer Loop</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="hidden sm:flex items-center gap-2 text-xs">
+        <a href="01-architecture-overview.html" class="nav-link px-2 py-1 rounded text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all">01</a>
+        <a href="02-outer-loop.html" class="nav-link px-2 py-1 rounded bg-blue-500/20 text-blue-300 font-medium">02</a>
+        <a href="03-inner-loop.html" class="nav-link px-2 py-1 rounded text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all">03</a>
+      </div>
+      <button onclick="toggleTheme()" class="p-2 rounded-lg glass hover:bg-white/10 transition-all" title="Toggle theme">
+        <svg id="theme-icon-dark" class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        <svg id="theme-icon-light" class="w-4 h-4 text-blue-500 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-6xl mx-auto px-6 py-12">
+
+  <!-- Hero -->
+  <section class="relative mb-16 hero-glow rounded-3xl py-16 px-8 text-center animate-in">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-xs font-medium text-blue-300 mb-6">
+      <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+      Page 2 of 3
+    </div>
+    <h1 class="text-4xl md:text-6xl font-black mb-4 gradient-text leading-tight">Outer Loop</h1>
+    <p class="text-xl text-gray-300 mb-2">Skill Optimization in Token-Space</p>
+    <p class="text-base text-gray-400 max-w-2xl mx-auto leading-relaxed">
+      Optimizes <strong class="text-blue-300">what the agent is told</strong> — instructions, prompts, and tool configurations — 
+      without changing model weights. The output is always an improved <code class="text-xs bg-white/5 px-1.5 py-0.5 rounded">SKILL.md</code>.
+    </p>
+    <button onclick="explainSimpler(this, 'the outer loop of agentic continual learning — how it optimizes skills and prompts in token space')" class="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg glass text-sm text-blue-300 hover:bg-white/10 transition-all cursor-pointer">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Explain Simpler
+    </button>
+    <div class="simpler-response mt-4 text-sm text-gray-400 hidden"></div>
+  </section>
+
+  <!-- Pipeline Stepper -->
+  <section class="mb-16 animate-in delay-1">
+    <h2 class="text-2xl font-bold mb-8 flex items-center gap-3">
+      <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-sm font-bold text-white">1</span>
+      Pipeline Stages
+    </h2>
+
+    <div class="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-0 mb-8">
+      <button onclick="openStep(0)" id="step-btn-0" class="stepper-active flex-1 glass rounded-xl px-4 py-3 text-center cursor-pointer hover:bg-white/10 transition-all">
+        <div class="text-xs text-blue-400 font-bold mb-1">Step 1</div>
+        <div class="text-sm font-semibold">eval-analyze</div>
+      </button>
+      <div class="hidden md:block stepper-connector flex-shrink-0" style="width:40px"></div>
+      <button onclick="openStep(1)" id="step-btn-1" class="flex-1 glass rounded-xl px-4 py-3 text-center cursor-pointer hover:bg-white/10 transition-all">
+        <div class="text-xs text-gray-500 font-bold mb-1">Step 2</div>
+        <div class="text-sm font-semibold text-gray-400">eval-dataset</div>
+      </button>
+      <div class="hidden md:block stepper-connector flex-shrink-0" style="width:40px"></div>
+      <button onclick="openStep(2)" id="step-btn-2" class="flex-1 glass rounded-xl px-4 py-3 text-center cursor-pointer hover:bg-white/10 transition-all">
+        <div class="text-xs text-gray-500 font-bold mb-1">Step 3</div>
+        <div class="text-sm font-semibold text-gray-400">eval-run</div>
+      </button>
+      <div class="hidden md:block stepper-connector flex-shrink-0" style="width:40px"></div>
+      <button onclick="openStep(3)" id="step-btn-3" class="flex-1 glass rounded-xl px-4 py-3 text-center cursor-pointer hover:bg-white/10 transition-all">
+        <div class="text-xs text-gray-500 font-bold mb-1">Step 4</div>
+        <div class="text-sm font-semibold text-gray-400">eval-review</div>
+      </button>
+      <div class="hidden md:block stepper-connector flex-shrink-0" style="width:40px"></div>
+      <button onclick="openStep(4)" id="step-btn-4" class="flex-1 glass rounded-xl px-4 py-3 text-center cursor-pointer hover:bg-white/10 transition-all">
+        <div class="text-xs text-gray-500 font-bold mb-1">Step 5</div>
+        <div class="text-sm font-semibold text-gray-400">eval-optimize</div>
+      </button>
+    </div>
+
+    <div class="glass rounded-2xl p-8">
+      <div id="step-content-0" class="step-panel">
+        <h3 class="text-xl font-bold text-blue-300 mb-3">eval-analyze</h3>
+        <p class="text-gray-400 leading-relaxed mb-4">Examines a target skill's <code class="text-xs bg-white/5 px-1.5 py-0.5 rounded">SKILL.md</code>, discovers test cases, and generates <code class="text-xs bg-white/5 px-1.5 py-0.5 rounded">eval.yaml</code> with natural language schema descriptions, suggested judges (inline checks + LLM quality assessment), and regression thresholds.</p>
+        <div class="glass rounded-lg p-4 text-sm">
+          <div class="text-blue-300 font-semibold mb-2">Output: eval.yaml contains</div>
+          <ul class="space-y-1 text-gray-400">
+            <li class="flex items-center gap-2"><span class="text-blue-400">→</span> Natural language <code class="text-xs bg-white/5 px-1 rounded">schema</code> descriptions of dataset and outputs</li>
+            <li class="flex items-center gap-2"><span class="text-blue-400">→</span> Suggested judges (inline checks + LLM quality)</li>
+            <li class="flex items-center gap-2"><span class="text-blue-400">→</span> Regression thresholds</li>
+          </ul>
+        </div>
+      </div>
+      <div id="step-content-1" class="step-panel hidden">
+        <h3 class="text-xl font-bold text-blue-300 mb-3">eval-dataset</h3>
+        <p class="text-gray-400 leading-relaxed mb-4">Generates test cases based on skill analysis. Creates <code class="text-xs bg-white/5 px-1.5 py-0.5 rounded">input.yaml</code> files with prompts, optional reference outputs, and annotations. Can bootstrap a starter dataset or expand an existing one to improve coverage.</p>
+        <div class="glass rounded-lg p-4 text-sm">
+          <div class="text-blue-300 font-semibold mb-2">Output: input.yaml per test case</div>
+          <ul class="space-y-1 text-gray-400">
+            <li class="flex items-center gap-2"><span class="text-blue-400">→</span> Test prompts matching real usage patterns</li>
+            <li class="flex items-center gap-2"><span class="text-blue-400">→</span> Optional reference outputs for comparison</li>
+            <li class="flex items-center gap-2"><span class="text-blue-400">→</span> Annotations for ground truth validation</li>
+          </ul>
+        </div>
+      </div>
+      <div id="step-content-2" class="step-panel hidden">
+        <h3 class="text-xl font-bold text-blue-300 mb-3">eval-run</h3>
+        <p class="text-gray-400 leading-relaxed mb-4">The core execution engine. Orchestrated by <code class="text-xs bg-white/5 px-1.5 py-0.5 rounded">skills/eval-run/scripts/</code> — the most complex step in the pipeline.</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm mt-4">
+            <thead><tr class="border-b border-white/10">
+              <th class="text-left px-4 py-2 text-blue-300 font-semibold">Sub-step</th>
+              <th class="text-left px-4 py-2 text-blue-300 font-semibold">Script</th>
+              <th class="text-left px-4 py-2 text-blue-300 font-semibold">Action</th>
+            </tr></thead>
+            <tbody>
+              <tr class="table-row-hover border-b border-white/5"><td class="px-4 py-2.5 text-white">Config discovery</td><td class="px-4 py-2.5 text-gray-400 font-mono text-xs">discover.py</td><td class="px-4 py-2.5 text-gray-400">Find and load eval.yaml</td></tr>
+              <tr class="table-row-hover border-b border-white/5"><td class="px-4 py-2.5 text-white">Preflight</td><td class="px-4 py-2.5 text-gray-400 font-mono text-xs">preflight.py</td><td class="px-4 py-2.5 text-gray-400">Check for stale artifacts</td></tr>
+              <tr class="table-row-hover border-b border-white/5"><td class="px-4 py-2.5 text-white">Workspace setup</td><td class="px-4 py-2.5 text-gray-400 font-mono text-xs">workspace.py</td><td class="px-4 py-2.5 text-gray-400">Isolated workspace per case + hook setup</td></tr>
+              <tr class="table-row-hover border-b border-white/5"><td class="px-4 py-2.5 text-white">Execution</td><td class="px-4 py-2.5 text-gray-400 font-mono text-xs">execute.py</td><td class="px-4 py-2.5 text-gray-400">Invoke runner (EvalRunner.run_skill())</td></tr>
+              <tr class="table-row-hover border-b border-white/5"><td class="px-4 py-2.5 text-white">Collection</td><td class="px-4 py-2.5 text-gray-400 font-mono text-xs">collect.py</td><td class="px-4 py-2.5 text-gray-400">Parse stdout → events.json, gather artifacts</td></tr>
+              <tr class="table-row-hover border-b border-white/5"><td class="px-4 py-2.5 text-white">Scoring</td><td class="px-4 py-2.5 text-gray-400 font-mono text-xs">score.py</td><td class="px-4 py-2.5 text-gray-400">Run judges, compute pass rates &amp; means</td></tr>
+              <tr class="table-row-hover"><td class="px-4 py-2.5 text-white">Reporting</td><td class="px-4 py-2.5 text-gray-400 font-mono text-xs">report.py</td><td class="px-4 py-2.5 text-gray-400">Generate analysis and HTML report</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div id="step-content-3" class="step-panel hidden">
+        <h3 class="text-xl font-bold text-blue-300 mb-3">eval-review</h3>
+        <p class="text-gray-400 leading-relaxed mb-4">Human-in-the-loop review. Presents judge scores and skill outputs for qualitative feedback. Produces <code class="text-xs bg-white/5 px-1.5 py-0.5 rounded">review.yaml</code> with per-case assessments. This is where human judgment augments automated scoring.</p>
+        <div class="glass rounded-lg p-4 text-sm">
+          <div class="text-blue-300 font-semibold mb-2">Review workflow</div>
+          <ul class="space-y-1 text-gray-400">
+            <li class="flex items-center gap-2"><span class="text-blue-400">1.</span> Present judge scores alongside raw outputs</li>
+            <li class="flex items-center gap-2"><span class="text-blue-400">2.</span> Reviewer provides qualitative feedback per case</li>
+            <li class="flex items-center gap-2"><span class="text-blue-400">3.</span> Generates review.yaml with assessments</li>
+            <li class="flex items-center gap-2"><span class="text-blue-400">4.</span> Feedback drives eval-optimize decisions</li>
+          </ul>
+        </div>
+      </div>
+      <div id="step-content-4" class="step-panel hidden">
+        <h3 class="text-xl font-bold text-blue-300 mb-3">eval-optimize</h3>
+        <p class="text-gray-400 leading-relaxed mb-4">The <strong class="text-white">closed loop</strong> step. Reads judge failures and rationales, performs root cause analysis, then makes surgical edits to <code class="text-xs bg-white/5 px-1.5 py-0.5 rounded">SKILL.md</code> only. Re-runs eval-run with <code class="text-xs bg-white/5 px-1.5 py-0.5 rounded">--baseline</code> to check for regressions.</p>
+        <div class="glass rounded-lg p-4 text-sm border border-amber-500/20">
+          <div class="text-amber-300 font-semibold mb-2">Hard Constraints</div>
+          <ul class="space-y-1 text-gray-400">
+            <li class="flex items-center gap-2"><span class="text-red-400">✗</span> Does NOT modify test cases, judges, or eval.yaml</li>
+            <li class="flex items-center gap-2"><span class="text-red-400">✗</span> Does NOT edit builtin judge code</li>
+            <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Only edits SKILL.md (skill instructions/prompt)</li>
+            <li class="flex items-center gap-2"><span class="text-blue-400">↻</span> Iterates up to max-iterations (default 3)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Runner Abstraction -->
+  <section class="mb-16 animate-in delay-2">
+    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+      <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-sm font-bold text-white">2</span>
+      Runner Abstraction
+    </h2>
+    <p class="text-gray-400 mb-6">The harness is agent-agnostic via the <code class="text-xs bg-white/5 px-1.5 py-0.5 rounded">EvalRunner</code> ABC. Three built-in runners:</p>
+    <div class="glass rounded-2xl overflow-hidden glow-blue mb-8">
+      <table class="w-full text-sm">
+        <thead><tr class="border-b border-white/10">
+          <th class="text-left px-6 py-4 text-blue-300 font-semibold">Runner</th>
+          <th class="text-left px-6 py-4 text-blue-300 font-semibold">runner.type</th>
+          <th class="text-left px-6 py-4 text-blue-300 font-semibold">Mechanism</th>
+          <th class="text-left px-6 py-4 text-blue-300 font-semibold">Events</th>
+        </tr></thead>
+        <tbody>
+          <tr class="table-row-hover border-b border-white/5">
+            <td class="px-6 py-4 text-white font-medium">ClaudeCodeRunner</td>
+            <td class="px-6 py-4"><code class="text-xs bg-white/5 px-1.5 py-0.5 rounded text-blue-300">claude-code</code></td>
+            <td class="px-6 py-4 text-gray-400 text-xs">claude --print --model {model} --output-format stream-json</td>
+            <td class="px-6 py-4"><span class="text-green-400 text-xs font-semibold">Full</span></td>
+          </tr>
+          <tr class="table-row-hover border-b border-white/5">
+            <td class="px-6 py-4 text-white font-medium">CliRunner</td>
+            <td class="px-6 py-4"><code class="text-xs bg-white/5 px-1.5 py-0.5 rounded text-blue-300">cli</code></td>
+            <td class="px-6 py-4 text-gray-400 text-xs">Arbitrary command template with {placeholder} substitution</td>
+            <td class="px-6 py-4"><span class="text-amber-400 text-xs font-semibold">If Claude-compat JSONL</span></td>
+          </tr>
+          <tr class="table-row-hover">
+            <td class="px-6 py-4 text-white font-medium">ResponsesAPIRunner</td>
+            <td class="px-6 py-4"><code class="text-xs bg-white/5 px-1.5 py-0.5 rounded text-blue-300">responses-api</code></td>
+            <td class="px-6 py-4 text-gray-400 text-xs">OpenAI Responses API + Shell tool</td>
+            <td class="px-6 py-4"><span class="text-amber-400 text-xs font-semibold">Partial</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CLI Runner detail -->
+    <div class="glass rounded-2xl p-8">
+      <h3 class="text-lg font-bold text-blue-300 mb-4">CLI Runner — OpenCode Configuration</h3>
+      <p class="text-gray-400 text-sm mb-4">The <code class="text-xs bg-white/5 px-1.5 py-0.5 rounded">cli</code> runner is the path for running eval-harness with OpenCode or any non-Claude agent. Available placeholders:</p>
+      <div class="overflow-x-auto mb-6">
+        <table class="w-full text-xs">
+          <thead><tr class="border-b border-white/10">
+            <th class="text-left px-4 py-2 text-blue-300 font-semibold">Placeholder</th>
+            <th class="text-left px-4 py-2 text-blue-300 font-semibold">Source</th>
+          </tr></thead>
+          <tbody>
+            <tr class="border-b border-white/5"><td class="px-4 py-2 font-mono text-blue-200">{agent}</td><td class="px-4 py-2 text-gray-400">System prompt / skill content</td></tr>
+            <tr class="border-b border-white/5"><td class="px-4 py-2 font-mono text-blue-200">{workspace}</td><td class="px-4 py-2 text-gray-400">Isolated workspace directory</td></tr>
+            <tr class="border-b border-white/5"><td class="px-4 py-2 font-mono text-blue-200">{model}</td><td class="px-4 py-2 text-gray-400">Model identifier from eval.yaml</td></tr>
+            <tr class="border-b border-white/5"><td class="px-4 py-2 font-mono text-blue-200">{output_dir}</td><td class="px-4 py-2 text-gray-400">Artifacts output directory</td></tr>
+            <tr class="border-b border-white/5"><td class="px-4 py-2 font-mono text-blue-200">{timeout}</td><td class="px-4 py-2 text-gray-400">Max execution time</td></tr>
+            <tr class="border-b border-white/5"><td class="px-4 py-2 font-mono text-blue-200">{max_budget_usd}</td><td class="px-4 py-2 text-gray-400">Cost budget cap</td></tr>
+            <tr class="border-b border-white/5"><td class="px-4 py-2 font-mono text-blue-200">{effort}</td><td class="px-4 py-2 text-gray-400">Effort level hint</td></tr>
+            <tr class="border-b border-white/5"><td class="px-4 py-2 font-mono text-blue-200">{system_prompt}</td><td class="px-4 py-2 text-gray-400">Custom system prompt override</td></tr>
+            <tr><td class="px-4 py-2 font-mono text-blue-200">{args}</td><td class="px-4 py-2 text-gray-400">Extra arguments + input.yaml fields</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="bg-gray-900/80 rounded-xl p-5 border border-white/5">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Example eval.yaml for OpenCode</span>
+          <button onclick="copyCode(this)" class="text-xs text-blue-400 hover:text-blue-300 transition-colors">Copy</button>
+        </div>
+        <pre class="text-xs text-gray-300 overflow-x-auto leading-relaxed"><code>runner:
+  type: cli
+  command: "opencode run {agent} --workspace {workspace} --model {model}"
+
+models:
+  - qwen3-30b-a3b
+
+dataset:
+  path: ./test-cases/
+
+judges:
+  - name: task_completion
+    prompt: "Did the agent complete the assigned task?"
+    scale: [1, 5]
+  - name: tool_usage
+    builtin: "cost_budget"
+
+thresholds:
+  min_pass_rate: 0.8
+  min_mean: 3.5</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Judge System - Flip Cards -->
+  <section class="mb-16 animate-in delay-3">
+    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+      <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-sm font-bold text-white">3</span>
+      Judge System
+      <span class="text-xs text-gray-500 font-normal ml-2">(hover to flip)</span>
+    </h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+      <!-- Builtin -->
+      <div class="flip-card">
+        <div class="flip-card-inner">
+          <div class="flip-card-front glass p-6 flex flex-col items-center justify-center text-center glow-blue">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-4">
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <h3 class="font-bold text-lg text-white mb-2">Builtin</h3>
+            <p class="text-xs text-gray-400">Auto-discovered from agent_eval/judges/</p>
+            <div class="mt-4 text-xs text-blue-400/60">Hover to see config →</div>
+          </div>
+          <div class="flip-card-back glass p-6 flex flex-col justify-center bg-gray-900/90">
+            <div class="text-xs text-blue-300 font-semibold mb-3">Configuration</div>
+            <pre class="text-xs text-gray-300 bg-black/30 rounded-lg p-3 overflow-hidden"><code>judges:
+  - name: cost_check
+    builtin: "cost_budget"
+  - name: tool_count
+    builtin: "tool_call_count"</code></pre>
+            <p class="text-xs text-gray-500 mt-3">Pre-built, deterministic checks for common metrics like cost, tool usage, and timing.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inline Check -->
+      <div class="flip-card">
+        <div class="flip-card-inner">
+          <div class="flip-card-front glass p-6 flex flex-col items-center justify-center text-center">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center mb-4">
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+            </div>
+            <h3 class="font-bold text-lg text-white mb-2">Inline Check</h3>
+            <p class="text-xs text-gray-400">Deterministic Python returning (bool, str)</p>
+            <div class="mt-4 text-xs text-blue-400/60">Hover to see config →</div>
+          </div>
+          <div class="flip-card-back glass p-6 flex flex-col justify-center bg-gray-900/90">
+            <div class="text-xs text-blue-300 font-semibold mb-3">Configuration</div>
+            <pre class="text-xs text-gray-300 bg-black/30 rounded-lg p-3 overflow-hidden"><code>judges:
+  - name: has_output_file
+    check: |
+      import os
+      path = outputs["files"]
+      exists = "result.json" in path
+      (exists, "Found" if exists
+       else "Missing result.json")</code></pre>
+            <p class="text-xs text-gray-500 mt-3">Inline Python for quick deterministic validation. Returns (bool, rationale).</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- LLM Judge -->
+      <div class="flip-card">
+        <div class="flip-card-inner">
+          <div class="flip-card-front glass p-6 flex flex-col items-center justify-center text-center">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mb-4">
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+            </div>
+            <h3 class="font-bold text-lg text-white mb-2">LLM Judge</h3>
+            <p class="text-xs text-gray-400">Jinja2 template → Anthropic API → score</p>
+            <div class="mt-4 text-xs text-blue-400/60">Hover to see config →</div>
+          </div>
+          <div class="flip-card-back glass p-6 flex flex-col justify-center bg-gray-900/90">
+            <div class="text-xs text-blue-300 font-semibold mb-3">Configuration</div>
+            <pre class="text-xs text-gray-300 bg-black/30 rounded-lg p-3 overflow-hidden"><code>judges:
+  - name: quality
+    prompt: |
+      Rate the agent's response
+      quality from 1-5.
+      Conversation:
+      {{ conversation }}
+    scale: [1, 5]
+    model: claude-sonnet-4-20250514</code></pre>
+            <p class="text-xs text-gray-500 mt-3">Full LLM evaluation with Jinja2 templating, configurable scale and model.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- External Code -->
+      <div class="flip-card">
+        <div class="flip-card-inner">
+          <div class="flip-card-front glass p-6 flex flex-col items-center justify-center text-center">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mb-4">
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+            </div>
+            <h3 class="font-bold text-lg text-white mb-2">External Code</h3>
+            <p class="text-xs text-gray-400">importlib loaded Python function</p>
+            <div class="mt-4 text-xs text-blue-400/60">Hover to see config →</div>
+          </div>
+          <div class="flip-card-back glass p-6 flex flex-col justify-center bg-gray-900/90">
+            <div class="text-xs text-blue-300 font-semibold mb-3">Configuration</div>
+            <pre class="text-xs text-gray-300 bg-black/30 rounded-lg p-3 overflow-hidden"><code>judges:
+  - name: custom_metric
+    module: "my_judges.metrics"
+    function: "evaluate_output"
+    # Function signature:
+    # def evaluate_output(
+    #   outputs: dict
+    # ) -> tuple[float, str]</code></pre>
+            <p class="text-xs text-gray-500 mt-3">Fully custom Python evaluation — any logic, any external service.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Outputs Dict Accordion -->
+  <section class="mb-16 animate-in delay-4">
+    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+      <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-sm font-bold text-white">4</span>
+      The <code class="text-lg bg-white/5 px-2 py-0.5 rounded ml-1">outputs</code> Dict
+    </h2>
+    <p class="text-gray-400 mb-6 text-sm">Every judge receives this rich record per test case. Click to expand each key:</p>
+    <div class="space-y-2">
+      <div class="glass rounded-xl overflow-hidden">
+        <button onclick="toggleAccordion(this)" class="w-full text-left px-6 py-3 flex items-center justify-between hover:bg-white/5 transition-all">
+          <span class="flex items-center gap-3"><code class="text-blue-300 text-sm font-mono">files</code><span class="text-xs text-gray-500">All collected artifacts</span></span>
+          <svg class="w-4 h-4 text-gray-500 transition-transform accordion-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="accordion-content px-6 text-gray-400 text-sm"><p>Dictionary of <code class="text-xs bg-white/5 px-1 rounded">{path: content}</code> — all files the agent created or modified during the test case execution. Useful for checking if expected output files were generated.</p></div>
+      </div>
+      <div class="glass rounded-xl overflow-hidden">
+        <button onclick="toggleAccordion(this)" class="w-full text-left px-6 py-3 flex items-center justify-between hover:bg-white/5 transition-all">
+          <span class="flex items-center gap-3"><code class="text-blue-300 text-sm font-mono">events</code><span class="text-xs text-gray-500">Parsed structured events</span></span>
+          <svg class="w-4 h-4 text-gray-500 transition-transform accordion-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="accordion-content px-6 text-gray-400 text-sm"><p>Full event stream from <code class="text-xs bg-white/5 px-1 rounded">events.json</code>. For Claude Code runner: complete stream-json JSONL with tool calls, assistant messages, system events. For CLI runner: only if stdout produces Claude-compatible JSONL.</p></div>
+      </div>
+      <div class="glass rounded-xl overflow-hidden">
+        <button onclick="toggleAccordion(this)" class="w-full text-left px-6 py-3 flex items-center justify-between hover:bg-white/5 transition-all">
+          <span class="flex items-center gap-3"><code class="text-blue-300 text-sm font-mono">conversation</code><span class="text-xs text-gray-500">Root assistant text</span></span>
+          <svg class="w-4 h-4 text-gray-500 transition-transform accordion-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="accordion-content px-6 text-gray-400 text-sm"><p>Extracted root-level assistant text from the event stream. The "final answer" the agent gave, without tool call details. Primary input for LLM judges evaluating response quality.</p></div>
+      </div>
+      <div class="glass rounded-xl overflow-hidden">
+        <button onclick="toggleAccordion(this)" class="w-full text-left px-6 py-3 flex items-center justify-between hover:bg-white/5 transition-all">
+          <span class="flex items-center gap-3"><code class="text-blue-300 text-sm font-mono">tool_calls</code><span class="text-xs text-gray-500">Tool call sequence</span></span>
+          <svg class="w-4 h-4 text-gray-500 transition-transform accordion-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="accordion-content px-6 text-gray-400 text-sm"><p>Ordered list of tool invocations from the event stream. Includes tool name, arguments, and results. Useful for judges that evaluate agent behavior (e.g., "did the agent use the right tools?").</p></div>
+      </div>
+      <div class="glass rounded-xl overflow-hidden">
+        <button onclick="toggleAccordion(this)" class="w-full text-left px-6 py-3 flex items-center justify-between hover:bg-white/5 transition-all">
+          <span class="flex items-center gap-3"><code class="text-blue-300 text-sm font-mono">exit_code, duration_s, cost_usd, num_turns</code><span class="text-xs text-gray-500">Execution metrics</span></span>
+          <svg class="w-4 h-4 text-gray-500 transition-transform accordion-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="accordion-content px-6 text-gray-400 text-sm"><p>Quantitative metrics: process exit code (0 = success), wall-clock duration in seconds, total API cost in USD, and conversation turn count. Used by builtin judges like <code class="text-xs bg-white/5 px-1 rounded">cost_budget</code>.</p></div>
+      </div>
+      <div class="glass rounded-xl overflow-hidden">
+        <button onclick="toggleAccordion(this)" class="w-full text-left px-6 py-3 flex items-center justify-between hover:bg-white/5 transition-all">
+          <span class="flex items-center gap-3"><code class="text-blue-300 text-sm font-mono">annotations</code><span class="text-xs text-gray-500">Ground truth from dataset</span></span>
+          <svg class="w-4 h-4 text-gray-500 transition-transform accordion-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="accordion-content px-6 text-gray-400 text-sm"><p>Ground truth data from <code class="text-xs bg-white/5 px-1 rounded">annotations.yaml</code> in the dataset. Provides expected outputs, reference answers, or validation criteria that judges can compare against.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Judges as DPO Signal -->
+  <section class="mb-16">
+    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+      <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-sm font-bold text-white">5</span>
+      Judges as DPO Signal
+    </h2>
+    <p class="text-gray-400 mb-6 text-sm">Judge scores map naturally to training signals — this is the <strong class="text-white">bridge</strong> between the outer loop and inner loop.</p>
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="glass rounded-2xl p-6 hover:bg-white/5 transition-all">
+        <div class="text-blue-400 font-bold text-sm mb-3">Pairwise Comparison</div>
+        <div class="flex items-center gap-2 mb-4">
+          <span class="text-2xl">🏆</span>
+          <span class="text-gray-400 text-sm">→ DPO Pairs</span>
+        </div>
+        <p class="text-xs text-gray-500 leading-relaxed">
+          <code class="bg-white/5 px-1 rounded">compare_runs()</code> with position-debiased LLM judge.<br>
+          <strong class="text-gray-300">Direct mapping:</strong> winner = chosen, loser = rejected.
+        </p>
+      </div>
+      <div class="glass rounded-2xl p-6 hover:bg-white/5 transition-all">
+        <div class="text-green-400 font-bold text-sm mb-3">Bool Judges</div>
+        <div class="flex items-center gap-2 mb-4">
+          <span class="text-2xl">✓✗</span>
+          <span class="text-gray-400 text-sm">→ Pass/Fail Labels</span>
+        </div>
+        <p class="text-xs text-gray-500 leading-relaxed">
+          Pass/fail + rationale per case.<br>
+          <strong class="text-gray-300">GRPO reward:</strong> pass = 1.0, fail = 0.0. Binary filtering for training data.
+        </p>
+      </div>
+      <div class="glass rounded-2xl p-6 hover:bg-white/5 transition-all">
+        <div class="text-purple-400 font-bold text-sm mb-3">Numeric LLM Judges</div>
+        <div class="flex items-center gap-2 mb-4">
+          <span class="text-2xl">📊</span>
+          <span class="text-gray-400 text-sm">→ GRPO Rewards</span>
+        </div>
+        <p class="text-xs text-gray-500 leading-relaxed">
+          1–5 scale scores per case.<br>
+          <strong class="text-gray-300">Continuous reward signal</strong> for reinforcement learning. Score ≥4 → chosen, ≤2 → rejected.
+        </p>
+      </div>
+    </div>
+    <button onclick="explainSimpler(this, 'how judge scores from skill evaluation can serve as reward/preference signals for model training via DPO and GRPO')" class="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg glass text-xs text-blue-300 hover:bg-white/10 transition-all cursor-pointer">
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Explain Simpler
+    </button>
+    <div class="simpler-response mt-3 text-sm text-gray-400 hidden"></div>
+  </section>
+
+  <!-- Eval-Gating Thresholds -->
+  <section class="mb-16">
+    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+      <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-sm font-bold text-white">6</span>
+      Eval-Gating Thresholds
+    </h2>
+    <div class="glass rounded-2xl overflow-hidden mb-6">
+      <table class="w-full text-sm">
+        <thead><tr class="border-b border-white/10">
+          <th class="text-left px-6 py-4 text-blue-300 font-semibold">Threshold</th>
+          <th class="text-left px-6 py-4 text-blue-300 font-semibold">Applies to</th>
+          <th class="text-left px-6 py-4 text-blue-300 font-semibold">Failure Condition</th>
+        </tr></thead>
+        <tbody>
+          <tr class="table-row-hover border-b border-white/5"><td class="px-6 py-3 font-mono text-blue-200 text-xs">min_pass_rate</td><td class="px-6 py-3 text-gray-400">Bool judges</td><td class="px-6 py-3 text-gray-400">Pass rate below threshold</td></tr>
+          <tr class="table-row-hover border-b border-white/5"><td class="px-6 py-3 font-mono text-blue-200 text-xs">min_mean</td><td class="px-6 py-3 text-gray-400">Numeric judges</td><td class="px-6 py-3 text-gray-400">Mean score below threshold</td></tr>
+          <tr class="table-row-hover border-b border-white/5"><td class="px-6 py-3 font-mono text-blue-200 text-xs">min_win_rate</td><td class="px-6 py-3 text-gray-400">Pairwise judges</td><td class="px-6 py-3 text-gray-400">Win rate below threshold</td></tr>
+          <tr class="table-row-hover"><td class="px-6 py-3 font-mono text-blue-200 text-xs">Baseline comparison</td><td class="px-6 py-3 text-gray-400">All judges</td><td class="px-6 py-3 text-gray-400">Mean/pass_rate drop > 0.5 vs baseline</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="bg-gray-900/80 rounded-xl p-5 border border-white/5">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-xs text-gray-500 font-semibold uppercase tracking-wider">Thresholds Config Example</span>
+        <button onclick="copyCode(this)" class="text-xs text-blue-400 hover:text-blue-300 transition-colors">Copy</button>
+      </div>
+      <pre class="text-xs text-gray-300 overflow-x-auto leading-relaxed"><code>thresholds:
+  min_pass_rate: 0.8        # Bool judges must pass 80%+
+  min_mean: 3.5             # Numeric judges must average 3.5+
+  min_win_rate: 0.55        # Pairwise judges must win 55%+
+  regression_tolerance: 0.5 # Max allowed drop vs baseline</code></pre>
+    </div>
+  </section>
+
+  <!-- Quiz -->
+  <section class="mb-16">
+    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+      <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-sm font-bold text-white">?</span>
+      Knowledge Check
+    </h2>
+    <div class="glass rounded-2xl p-8">
+      <p class="text-lg font-semibold mb-6">Which runner type would you use for OpenCode?</p>
+      <div class="space-y-3" id="quiz-2">
+        <button onclick="checkAnswer(this, false)" class="quiz-option w-full text-left px-5 py-3.5 rounded-xl glass hover:bg-white/10 transition-all flex items-center gap-4">
+          <span class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm font-bold text-blue-300 shrink-0">A</span>
+          <span>claude-code — uses stream-json output format</span>
+        </button>
+        <button onclick="checkAnswer(this, true)" class="quiz-option w-full text-left px-5 py-3.5 rounded-xl glass hover:bg-white/10 transition-all flex items-center gap-4">
+          <span class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm font-bold text-blue-300 shrink-0">B</span>
+          <span>cli — arbitrary command template with {placeholder} substitution</span>
+        </button>
+        <button onclick="checkAnswer(this, false)" class="quiz-option w-full text-left px-5 py-3.5 rounded-xl glass hover:bg-white/10 transition-all flex items-center gap-4">
+          <span class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm font-bold text-blue-300 shrink-0">C</span>
+          <span>responses-api — OpenAI Responses API + Shell tool</span>
+        </button>
+        <button onclick="checkAnswer(this, false)" class="quiz-option w-full text-left px-5 py-3.5 rounded-xl glass hover:bg-white/10 transition-all flex items-center gap-4">
+          <span class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm font-bold text-blue-300 shrink-0">D</span>
+          <span>custom — build a new runner from EvalRunner ABC</span>
+        </button>
+      </div>
+      <div id="quiz-2-feedback" class="mt-4 text-sm hidden"></div>
+    </div>
+  </section>
+
+  <!-- Bottom Navigation -->
+  <nav class="flex items-center justify-between pt-8 border-t border-white/10">
+    <a href="01-architecture-overview.html" class="group inline-flex items-center gap-3 px-6 py-3 rounded-xl glass hover:bg-white/10 transition-all">
+      <svg class="w-5 h-5 text-gray-500 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      <span>
+        <span class="text-sm text-gray-400">Previous</span>
+        <span class="block font-semibold text-blue-300 group-hover:text-blue-200 transition-colors">01 — Architecture</span>
+      </span>
+    </a>
+    <a href="03-inner-loop.html" class="group inline-flex items-center gap-3 px-6 py-3 rounded-xl glass hover:bg-white/10 transition-all">
+      <span class="text-right">
+        <span class="text-sm text-gray-400">Next</span>
+        <span class="block font-semibold text-blue-300 group-hover:text-blue-200 transition-colors">03 — Inner Loop</span>
+      </span>
+      <svg class="w-5 h-5 text-gray-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    </a>
+  </nav>
+
+</main>
+
+<footer class="max-w-6xl mx-auto px-6 py-8 text-center text-xs text-gray-600">
+  Agentic Continual Learning — Knowledge Base
+</footer>
+
+<script>
+// Mark visited
+const visited = JSON.parse(localStorage.getItem('teach-me-visited') || '[]');
+if (!visited.includes('02-outer-loop')) {
+  visited.push('02-outer-loop');
+  localStorage.setItem('teach-me-visited', JSON.stringify(visited));
+}
+document.querySelectorAll('.nav-link').forEach(link => {
+  const href = link.getAttribute('href');
+  const id = href?.replace('.html','');
+  if (visited.includes(id)) link.classList.add('visited-page');
+});
+
+// Theme
+function toggleTheme() {
+  const html = document.documentElement;
+  html.classList.toggle('dark');
+  const isDark = html.classList.contains('dark');
+  document.getElementById('theme-icon-dark').classList.toggle('hidden', !isDark);
+  document.getElementById('theme-icon-light').classList.toggle('hidden', isDark);
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+}
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'light') {
+    document.documentElement.classList.remove('dark');
+    document.getElementById('theme-icon-dark').classList.add('hidden');
+    document.getElementById('theme-icon-light').classList.remove('hidden');
+  }
+})();
+
+// Pipeline stepper
+function openStep(idx) {
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.add('hidden'));
+  document.getElementById('step-content-' + idx).classList.remove('hidden');
+  for (let i = 0; i < 5; i++) {
+    const btn = document.getElementById('step-btn-' + i);
+    if (i === idx) {
+      btn.classList.add('stepper-active');
+      btn.querySelector('div:first-child').classList.remove('text-gray-500');
+      btn.querySelector('div:first-child').classList.add('text-blue-400');
+      btn.querySelector('div:last-child').classList.remove('text-gray-400');
+    } else {
+      btn.classList.remove('stepper-active');
+      btn.querySelector('div:first-child').classList.add('text-gray-500');
+      btn.querySelector('div:first-child').classList.remove('text-blue-400');
+      btn.querySelector('div:last-child').classList.add('text-gray-400');
+    }
+  }
+}
+
+// Accordion
+function toggleAccordion(btn) {
+  const content = btn.nextElementSibling;
+  const chevron = btn.querySelector('.accordion-chevron');
+  const isOpen = content.classList.contains('open');
+  if (isOpen) {
+    content.classList.remove('open');
+    chevron.style.transform = '';
+  } else {
+    content.classList.add('open');
+    chevron.style.transform = 'rotate(180deg)';
+  }
+}
+
+// Quiz
+function checkAnswer(btn, correct) {
+  const container = btn.closest('[id^="quiz"]');
+  const feedback = document.getElementById(container.id + '-feedback');
+  container.querySelectorAll('.quiz-option').forEach(b => {
+    b.disabled = true; b.style.opacity = '0.5'; b.style.pointerEvents = 'none';
+  });
+  btn.style.opacity = '1';
+  if (correct) {
+    btn.classList.add('quiz-correct');
+    feedback.innerHTML = '<span class="text-green-400">✓ Correct!</span> The <code class="text-xs bg-white/5 px-1 rounded">cli</code> runner is the path for running eval-harness with OpenCode or any non-Claude agent. It supports {placeholder} substitution for flexible command templates.';
+  } else {
+    btn.classList.add('quiz-wrong');
+    feedback.innerHTML = '<span class="text-red-400">✗ Not quite.</span> The <strong>cli</strong> runner is the correct choice — it supports arbitrary command templates with placeholder substitution, making it agent-agnostic for tools like OpenCode.';
+  }
+  feedback.classList.remove('hidden');
+}
+
+// Copy code
+function copyCode(btn) {
+  const pre = btn.closest('.bg-gray-900\\/80, .bg-gray-900/80')?.querySelector('code') || btn.parentElement.nextElementSibling?.querySelector('code');
+  if (pre) {
+    navigator.clipboard.writeText(pre.textContent);
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  }
+}
+
+// Explain Simpler
+async function explainSimpler(btn, topic) {
+  const responseDiv = btn.nextElementSibling;
+  responseDiv.classList.remove('hidden');
+  responseDiv.innerHTML = '<span class="text-blue-400 animate-pulse">Asking for a simpler explanation...</span>';
+  try {
+    const res = await fetch('http://localhost:3847/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: `Explain this concept in very simple terms, as if to a beginner: ${topic}` })
+    });
+    const data = await res.json();
+    responseDiv.innerHTML = '<div class="glass rounded-lg p-4 mt-2"><strong class="text-blue-300">Simpler explanation:</strong> ' + (data.answer || data.response || JSON.stringify(data)) + '</div>';
+  } catch (e) {
+    responseDiv.innerHTML = '<div class="glass rounded-lg p-4 mt-2 text-amber-400">Could not reach the explanation service at localhost:3847. Make sure it is running.</div>';
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+apiVersion: mlflow.opendatahub.io/v1
+kind: MLflow
+metadata:
+  name: mlflow
+  namespace: eval-poc
+spec:
+  replicas: 1
+  backendStoreUriFrom:
+    name: mlflow-db-credentials
+    key: MLFLOW_BACKEND_STORE_URI
+  serveArtifacts: true
+  storage:
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi

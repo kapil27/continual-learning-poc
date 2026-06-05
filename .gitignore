@@ -1,0 +1,14 @@
+# Dependencies
+knowledge-base/node_modules/
+knowledge-base/package-lock.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+poc/logs/*.log
+
+# Temp files
+*.tmp
+*.swp

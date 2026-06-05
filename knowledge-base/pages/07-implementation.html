@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Implementation Progress — Agentic Continual Learning</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], mono: ['Fira Code', 'monospace'] },
+        }
+      }
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); }
+    .glass-hover:hover { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.15); }
+    html:not(.dark) .glass { background: rgba(255,255,255,0.65); border-color: rgba(0,0,0,0.08); }
+    html:not(.dark) .glass-hover:hover { background: rgba(255,255,255,0.80); }
+    .fade-in { animation: fadeIn 0.5s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    details summary { cursor: pointer; list-style: none; }
+    details summary::-webkit-details-marker { display: none; }
+    details[open] .chevron { transform: rotate(90deg); }
+    .tab-active { border-color: #06b6d4; color: #06b6d4; background: rgba(6,182,212,0.08); }
+    .tab-inactive { border-color: transparent; color: #9ca3af; }
+    .tab-inactive:hover { color: #d1d5db; background: rgba(255,255,255,0.03); }
+    .copy-btn:active { transform: scale(0.95); }
+    .status-pulse { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    .quiz-option { transition: all 0.2s; }
+    .quiz-option:hover:not(.quiz-locked) { transform: translateX(4px); border-color: rgba(6,182,212,0.5); }
+    .quiz-correct { border-color: #22c55e !important; background: rgba(34,197,94,0.08) !important; }
+    .quiz-wrong { border-color: #ef4444 !important; background: rgba(239,68,68,0.05) !important; }
+  </style>
+</head>
+<body class="bg-gray-950 dark:bg-gray-950 bg-gray-50 text-gray-100 dark:text-gray-100 text-gray-900 font-sans min-h-screen transition-colors duration-300">
+
+  <!-- Sticky Navbar -->
+  <nav class="sticky top-0 z-50 glass border-b border-white/10 dark:border-white/10 border-gray-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2 text-sm">
+        <a href="../index.html" class="text-cyan-400 hover:text-cyan-300 transition-colors">🏠 Home</a>
+        <span class="text-gray-500">/</span>
+        <span class="text-gray-400 dark:text-gray-400 text-gray-600">Pages</span>
+        <span class="text-gray-500">/</span>
+        <span class="text-cyan-300 dark:text-cyan-300 text-cyan-700 font-medium">07 — Implementation Progress</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="visitBadge" class="hidden text-xs bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/30">✓ Visited</span>
+        <button onclick="toggleTheme()" class="p-2 rounded-lg glass glass-hover transition-all duration-200 hover:scale-105" title="Toggle theme">
+          <span id="themeIcon" class="text-lg">🌙</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-12 fade-in">
+
+    <!-- Page Header -->
+    <header class="text-center space-y-4">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full glass text-cyan-400 text-xs font-medium tracking-wider uppercase">
+        <span>Module 07</span>
+        <span class="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></span>
+        <span>Implementation Progress</span>
+      </div>
+      <h1 class="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-teal-400 via-cyan-400 to-sky-400 bg-clip-text text-transparent leading-tight">
+        Implementation Progress
+      </h1>
+      <p class="text-lg text-gray-400 dark:text-gray-400 text-gray-600 max-w-2xl mx-auto">
+        What was actually deployed and tested on a real OpenShift cluster — issues hit, lessons learned, and validated configurations.
+      </p>
+    </header>
+
+    <!-- Section 1: Infrastructure Status Dashboard -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">1</div>
+        <h2 class="text-2xl font-bold text-white dark:text-white text-gray-900">Infrastructure Status Dashboard</h2>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Card 1: eval-poc namespace -->
+        <div class="glass rounded-xl p-5 space-y-3 hover:border-teal-500/30 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold text-white dark:text-white text-gray-900">eval-poc namespace</h3>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/15 text-green-400 border border-green-500/30">● Running</span>
+          </div>
+          <div class="text-sm text-gray-400 space-y-1">
+            <div class="flex justify-between"><span>Status</span><span class="text-green-400 font-medium">Created</span></div>
+            <div class="flex justify-between"><span>Cluster</span><span class="font-mono text-xs text-cyan-300">openshift-t4</span></div>
+          </div>
+        </div>
+
+        <!-- Card 2: PostgreSQL -->
+        <div class="glass rounded-xl p-5 space-y-3 hover:border-teal-500/30 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold text-white dark:text-white text-gray-900">PostgreSQL</h3>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/15 text-green-400 border border-green-500/30">● Running</span>
+          </div>
+          <div class="text-sm text-gray-400 space-y-1">
+            <div class="flex justify-between"><span>Version</span><span class="font-mono text-xs text-cyan-300">16</span></div>
+            <div class="flex justify-between"><span>Endpoint</span><span class="font-mono text-xs text-cyan-300">postgresql:5432</span></div>
+          </div>
+        </div>
+
+        <!-- Card 3: MLflow -->
+        <div class="glass rounded-xl p-5 space-y-3 hover:border-teal-500/30 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold text-white dark:text-white text-gray-900">MLflow</h3>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/15 text-green-400 border border-green-500/30">● Available</span>
+          </div>
+          <div class="text-sm text-gray-400 space-y-1">
+            <div class="flex justify-between"><span>Version</span><span class="font-mono text-xs text-cyan-300">3.12.0</span></div>
+            <div class="flex justify-between"><span>Endpoint</span><span class="font-mono text-xs text-cyan-300">mlflow-route:5000</span></div>
+          </div>
+        </div>
+
+        <!-- Card 4: vLLM -->
+        <div class="glass rounded-xl p-5 space-y-3 hover:border-teal-500/30 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold text-white dark:text-white text-gray-900">vLLM + Qwen 3B</h3>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/15 text-green-400 border border-green-500/30">● Running</span>
+          </div>
+          <div class="text-sm text-gray-400 space-y-1">
+            <div class="flex justify-between"><span>Version</span><span class="font-mono text-xs text-cyan-300">0.8.4</span></div>
+            <div class="flex justify-between"><span>Endpoint</span><span class="font-mono text-xs text-cyan-300">vllm-svc:8000/v1</span></div>
+          </div>
+        </div>
+
+        <!-- Card 5: OpenCode -->
+        <div class="glass rounded-xl p-5 space-y-3 hover:border-teal-500/30 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold text-white dark:text-white text-gray-900">OpenCode</h3>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/15 text-green-400 border border-green-500/30">● Installed</span>
+          </div>
+          <div class="text-sm text-gray-400 space-y-1">
+            <div class="flex justify-between"><span>Version</span><span class="font-mono text-xs text-cyan-300">1.16.0</span></div>
+            <div class="flex justify-between"><span>Provider</span><span class="font-mono text-xs text-cyan-300">openai-compatible</span></div>
+          </div>
+        </div>
+
+        <!-- Card 6: Eval Harness -->
+        <div class="glass rounded-xl p-5 space-y-3 hover:border-teal-500/30 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold text-white dark:text-white text-gray-900">Eval Harness PR #90</h3>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/15 text-green-400 border border-green-500/30">● Running</span>
+          </div>
+          <div class="text-sm text-gray-400 space-y-1">
+            <div class="flex justify-between"><span>Runners</span><span class="font-mono text-xs text-cyan-300">4 active</span></div>
+            <div class="flex justify-between"><span>Status</span><span class="font-mono text-xs text-cyan-300">eval-run ready</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Issues Found and Solved -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">2</div>
+        <h2 class="text-2xl font-bold text-white dark:text-white text-gray-900">Issues Found & Solved</h2>
+      </div>
+      <p class="text-gray-400 dark:text-gray-400 text-gray-600">9 issues encountered during deployment — all resolved. Click to expand details.</p>
+
+      <div class="space-y-3" id="issuesAccordion">
+
+        <!-- Issue 1 -->
+        <details class="glass rounded-xl overflow-hidden border-l-4 border-l-red-500 hover:border-l-red-400 transition-colors">
+          <summary class="px-5 py-4 flex items-center gap-3">
+            <svg class="chevron w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <span class="font-mono text-xs text-cyan-400 shrink-0">#1</span>
+            <span class="font-medium text-white dark:text-white text-gray-900 flex-1">MLflow SQLite fails under SCC</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-red-500/15 text-red-400 border border-red-500/30 shrink-0">Critical</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 pt-4">
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Symptom</span>
+              <pre class="mt-1 p-3 rounded-lg bg-red-950/30 border border-red-500/20 text-red-300 text-sm font-mono overflow-x-auto">OperationalError: unable to open database file
+mlflow.store.db.utils: /mlflow/mlruns/mlflow.db — read-only file system</pre>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Root Cause</span>
+              <p class="mt-1 text-sm text-gray-300 dark:text-gray-300 text-gray-700">OpenShift Security Context Constraints (SCC) prevent arbitrary UID from writing to container filesystem paths. MLflow defaults to SQLite which requires writable local storage.</p>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fix</span>
+              <pre class="mt-1 p-3 rounded-lg bg-green-950/30 border border-green-500/20 text-green-300 text-sm font-mono overflow-x-auto">Deploy PostgreSQL 16 as backend store:
+MLFLOW_BACKEND_STORE_URI=postgresql://mlflow:***@postgresql:5432/mlflow</pre>
+            </div>
+          </div>
+        </details>
+
+        <!-- Issue 2 -->
+        <details class="glass rounded-xl overflow-hidden border-l-4 border-l-amber-500 hover:border-l-amber-400 transition-colors">
+          <summary class="px-5 py-4 flex items-center gap-3">
+            <svg class="chevron w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <span class="font-mono text-xs text-cyan-400 shrink-0">#2</span>
+            <span class="font-medium text-white dark:text-white text-gray-900 flex-1">psycopg2 demands SSL</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">Medium</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 pt-4">
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Symptom</span>
+              <pre class="mt-1 p-3 rounded-lg bg-red-950/30 border border-red-500/20 text-red-300 text-sm font-mono overflow-x-auto">psycopg2.OperationalError: connection to server refused
+FATAL: no pg_hba.conf entry for host ... SSL off</pre>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Root Cause</span>
+              <p class="mt-1 text-sm text-gray-300 dark:text-gray-300 text-gray-700">Default psycopg2 connection attempts SSL negotiation. In-cluster PostgreSQL has no TLS cert configured, causing connection rejection.</p>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fix</span>
+              <pre class="mt-1 p-3 rounded-lg bg-green-950/30 border border-green-500/20 text-green-300 text-sm font-mono overflow-x-auto">Append ?sslmode=disable to connection URI:
+postgresql://mlflow:pass@postgresql:5432/mlflow?sslmode=disable</pre>
+            </div>
+          </div>
+        </details>
+
+        <!-- Issue 3 -->
+        <details class="glass rounded-xl overflow-hidden border-l-4 border-l-amber-500 hover:border-l-amber-400 transition-colors">
+          <summary class="px-5 py-4 flex items-center gap-3">
+            <svg class="chevron w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <span class="font-mono text-xs text-cyan-400 shrink-0">#3</span>
+            <span class="font-medium text-white dark:text-white text-gray-900 flex-1">HuggingFace xorbs CDN stalls</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">Medium</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 pt-4">
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Symptom</span>
+              <pre class="mt-1 p-3 rounded-lg bg-red-950/30 border border-red-500/20 text-red-300 text-sm font-mono overflow-x-auto">ConnectionTimeout: cdn-lfs-us-1.hf.co — download stalls at 2.1GB/4.5GB
+Pod OOMKilled during inline model download in vLLM init</pre>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Root Cause</span>
+              <p class="mt-1 text-sm text-gray-300 dark:text-gray-300 text-gray-700">Downloading multi-GB model weights inside the serving container init causes timeouts and OOM. CDN bandwidth through cluster egress is throttled.</p>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fix</span>
+              <pre class="mt-1 p-3 rounded-lg bg-green-950/30 border border-green-500/20 text-green-300 text-sm font-mono overflow-x-auto">Pre-download via Kubernetes Job using huggingface_hub:
+huggingface-cli download Qwen/Qwen3-3B --local-dir /models/qwen3-3b
+Then mount PVC into vLLM deployment.</pre>
+            </div>
+          </div>
+        </details>
+
+        <!-- Issue 4 -->
+        <details class="glass rounded-xl overflow-hidden border-l-4 border-l-red-500 hover:border-l-red-400 transition-colors">
+          <summary class="px-5 py-4 flex items-center gap-3">
+            <svg class="chevron w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <span class="font-mono text-xs text-cyan-400 shrink-0">#4</span>
+            <span class="font-medium text-white dark:text-white text-gray-900 flex-1">RHOAI vLLM image 404</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-red-500/15 text-red-400 border border-red-500/30 shrink-0">Critical</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 pt-4">
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Symptom</span>
+              <pre class="mt-1 p-3 rounded-lg bg-red-950/30 border border-red-500/20 text-red-300 text-sm font-mono overflow-x-auto">ErrImagePull: quay.io/modh/vllm:rhoai-2.19 — manifest unknown
+Back-off pulling image — ImagePullBackOff</pre>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Root Cause</span>
+              <p class="mt-1 text-sm text-gray-300 dark:text-gray-300 text-gray-700">The RHOAI-specific vLLM image tag was not yet published to the registry. Internal image tags have a different lifecycle from the upstream project.</p>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fix</span>
+              <pre class="mt-1 p-3 rounded-lg bg-green-950/30 border border-green-500/20 text-green-300 text-sm font-mono overflow-x-auto">Use upstream public vLLM image:
+image: vllm/vllm-openai:v0.8.4</pre>
+            </div>
+          </div>
+        </details>
+
+        <!-- Issue 5 -->
+        <details class="glass rounded-xl overflow-hidden border-l-4 border-l-red-500 hover:border-l-red-400 transition-colors">
+          <summary class="px-5 py-4 flex items-center gap-3">
+            <svg class="chevron w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <span class="font-mono text-xs text-cyan-400 shrink-0">#5</span>
+            <span class="font-medium text-white dark:text-white text-gray-900 flex-1">Qwen 7B OOMs on T4</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-red-500/15 text-red-400 border border-red-500/30 shrink-0">Critical</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 pt-4">
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Symptom</span>
+              <pre class="mt-1 p-3 rounded-lg bg-red-950/30 border border-red-500/20 text-red-300 text-sm font-mono overflow-x-auto">torch.cuda.OutOfMemoryError: CUDA out of memory.
+Tried to allocate 512 MiB (GPU 0; 15.89 GiB total; 14.2 GiB reserved)</pre>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Root Cause</span>
+              <p class="mt-1 text-sm text-gray-300 dark:text-gray-300 text-gray-700">Qwen 7B requires ~14.5GB VRAM at fp16. T4 has 16GB but after KV cache and overhead, insufficient memory remains for inference at useful context lengths.</p>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fix</span>
+              <pre class="mt-1 p-3 rounded-lg bg-green-950/30 border border-green-500/20 text-green-300 text-sm font-mono overflow-x-auto">Downgrade to Qwen3-3B for T4 dry-run:
+--model Qwen/Qwen3-3B --max-model-len 32768 --gpu-memory-utilization 0.92</pre>
+            </div>
+          </div>
+        </details>
+
+        <!-- Issue 6 -->
+        <details class="glass rounded-xl overflow-hidden border-l-4 border-l-amber-500 hover:border-l-amber-400 transition-colors">
+          <summary class="px-5 py-4 flex items-center gap-3">
+            <svg class="chevron w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <span class="font-mono text-xs text-cyan-400 shrink-0">#6</span>
+            <span class="font-medium text-white dark:text-white text-gray-900 flex-1">OpenCode run hangs</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">Medium</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 pt-4">
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Symptom</span>
+              <pre class="mt-1 p-3 rounded-lg bg-red-950/30 border border-red-500/20 text-red-300 text-sm font-mono overflow-x-auto">opencode run "prompt" — process hangs indefinitely
+No output, no error, CPU at 0%</pre>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Root Cause</span>
+              <p class="mt-1 text-sm text-gray-300 dark:text-gray-300 text-gray-700">OpenCode's TUI mode waits for interactive terminal input even in headless/script mode. Without a proper stdin pipe, it blocks forever waiting for keypress.</p>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fix</span>
+              <pre class="mt-1 p-3 rounded-lg bg-green-950/30 border border-green-500/20 text-green-300 text-sm font-mono overflow-x-auto">Pipe stdin to prevent hang:
+echo "" | opencode run "your prompt here"</pre>
+            </div>
+          </div>
+        </details>
+
+        <!-- Issue 7 -->
+        <details class="glass rounded-xl overflow-hidden border-l-4 border-l-amber-500 hover:border-l-amber-400 transition-colors">
+          <summary class="px-5 py-4 flex items-center gap-3">
+            <svg class="chevron w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <span class="font-mono text-xs text-cyan-400 shrink-0">#7</span>
+            <span class="font-medium text-white dark:text-white text-gray-900 flex-1">OpenCode URL parse error</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">Medium</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 pt-4">
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Symptom</span>
+              <pre class="mt-1 p-3 rounded-lg bg-red-950/30 border border-red-500/20 text-red-300 text-sm font-mono overflow-x-auto">Error: invalid URL — cannot parse "http://vllm-svc:8000/v1" as OpenAI endpoint
+provider "openai" expects api.openai.com host</pre>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Root Cause</span>
+              <p class="mt-1 text-sm text-gray-300 dark:text-gray-300 text-gray-700">OpenCode's default OpenAI provider validates the URL format and rejects non-OpenAI hostnames. A compatible provider type is needed for self-hosted endpoints.</p>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fix</span>
+              <pre class="mt-1 p-3 rounded-lg bg-green-950/30 border border-green-500/20 text-green-300 text-sm font-mono overflow-x-auto">Use @ai-sdk/openai-compatible provider in opencode.json:
+"provider": { "type": "openai-compatible", "baseURL": "http://vllm-svc:8000/v1" }</pre>
+            </div>
+          </div>
+        </details>
+
+        <!-- Issue 8 -->
+        <details class="glass rounded-xl overflow-hidden border-l-4 border-l-amber-500 hover:border-l-amber-400 transition-colors">
+          <summary class="px-5 py-4 flex items-center gap-3">
+            <svg class="chevron w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <span class="font-mono text-xs text-cyan-400 shrink-0">#8</span>
+            <span class="font-medium text-white dark:text-white text-gray-900 flex-1">vLLM tool calling 400</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">Medium</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 pt-4">
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Symptom</span>
+              <pre class="mt-1 p-3 rounded-lg bg-red-950/30 border border-red-500/20 text-red-300 text-sm font-mono overflow-x-auto">HTTP 400 Bad Request: "tool_choice" is not supported
+{"error": "This model does not support tool/function calling"}</pre>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Root Cause</span>
+              <p class="mt-1 text-sm text-gray-300 dark:text-gray-300 text-gray-700">vLLM does not enable tool calling by default — it requires explicit CLI flags to activate the tool-call parser for compatible models like Qwen.</p>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fix</span>
+              <pre class="mt-1 p-3 rounded-lg bg-green-950/30 border border-green-500/20 text-green-300 text-sm font-mono overflow-x-auto">Add vLLM args:
+--enable-auto-tool-choice --tool-call-parser hermes</pre>
+            </div>
+          </div>
+        </details>
+
+        <!-- Issue 9 -->
+        <details class="glass rounded-xl overflow-hidden border-l-4 border-l-red-500 hover:border-l-red-400 transition-colors">
+          <summary class="px-5 py-4 flex items-center gap-3">
+            <svg class="chevron w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <span class="font-mono text-xs text-cyan-400 shrink-0">#9</span>
+            <span class="font-medium text-white dark:text-white text-gray-900 flex-1">Context overflow 39K > 32K</span>
+            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-red-500/15 text-red-400 border border-red-500/30 shrink-0">Critical</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 pt-4">
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Symptom</span>
+              <pre class="mt-1 p-3 rounded-lg bg-red-950/30 border border-red-500/20 text-red-300 text-sm font-mono overflow-x-auto">Error: prompt too long — 39,142 tokens exceeds max 32,768
+OpenCode agentic session aborted mid-task</pre>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Root Cause</span>
+              <p class="mt-1 text-sm text-gray-300 dark:text-gray-300 text-gray-700">Agentic coding sessions accumulate context rapidly — tool calls, file contents, and conversation history exceed 32K tokens within a few iterations. Qwen 3B on T4 cannot serve longer contexts due to VRAM limits.</p>
+            </div>
+            <div>
+              <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fix</span>
+              <pre class="mt-1 p-3 rounded-lg bg-green-950/30 border border-green-500/20 text-green-300 text-sm font-mono overflow-x-auto">Production target: Qwen3-32B on A100 (80GB) with 128K context:
+--model Qwen/Qwen3-32B --max-model-len 131072 --tensor-parallel-size 2</pre>
+            </div>
+          </div>
+        </details>
+
+      </div>
+    </section>
+
+    <!-- Section 3: T4 vs A100 Comparison -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">3</div>
+        <h2 class="text-2xl font-bold text-white dark:text-white text-gray-900">T4 vs A100 Comparison</h2>
+      </div>
+
+      <div class="glass rounded-xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-white/10">
+                <th class="text-left px-5 py-3 text-gray-400 font-medium uppercase text-xs tracking-wider">Property</th>
+                <th class="text-left px-5 py-3 text-amber-400 font-medium uppercase text-xs tracking-wider">T4 (Dry-Run)</th>
+                <th class="text-left px-5 py-3 text-green-400 font-medium uppercase text-xs tracking-wider">A100 (IDM Target)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+              <tr class="hover:bg-white/[0.02] transition-colors">
+                <td class="px-5 py-3 font-medium text-gray-300">GPUs</td>
+                <td class="px-5 py-3 font-mono text-xs text-amber-300">1× T4</td>
+                <td class="px-5 py-3 font-mono text-xs text-green-300">2× A100</td>
+              </tr>
+              <tr class="hover:bg-white/[0.02] transition-colors">
+                <td class="px-5 py-3 font-medium text-gray-300">VRAM</td>
+                <td class="px-5 py-3 font-mono text-xs text-amber-300">16 GB</td>
+                <td class="px-5 py-3 font-mono text-xs text-green-300">160 GB (2×80)</td>
+              </tr>
+              <tr class="hover:bg-white/[0.02] transition-colors">
+                <td class="px-5 py-3 font-medium text-gray-300">Max Model</td>
+                <td class="px-5 py-3 font-mono text-xs text-amber-300">~7B (tight)</td>
+                <td class="px-5 py-3 font-mono text-xs text-green-300">70B+ (comfortable)</td>
+              </tr>
+              <tr class="hover:bg-white/[0.02] transition-colors">
+                <td class="px-5 py-3 font-medium text-gray-300">Recommended Model</td>
+                <td class="px-5 py-3 font-mono text-xs text-amber-300">Qwen3-3B</td>
+                <td class="px-5 py-3 font-mono text-xs text-green-300">Qwen3-32B</td>
+              </tr>
+              <tr class="hover:bg-white/[0.02] transition-colors">
+                <td class="px-5 py-3 font-medium text-gray-300">Context Window</td>
+                <td class="px-5 py-3 font-mono text-xs text-amber-300">32K tokens</td>
+                <td class="px-5 py-3 font-mono text-xs text-green-300">128K tokens</td>
+              </tr>
+              <tr class="hover:bg-white/[0.02] transition-colors">
+                <td class="px-5 py-3 font-medium text-gray-300">OpenCode Compatible?</td>
+                <td class="px-5 py-3"><span class="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">⚠ Limited</span></td>
+                <td class="px-5 py-3"><span class="px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/15 text-green-400 border border-green-500/30">✓ Full Support</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Validated Configs -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">4</div>
+        <h2 class="text-2xl font-bold text-white dark:text-white text-gray-900">Validated Configurations</h2>
+      </div>
+
+      <!-- Tabs -->
+      <div class="glass rounded-xl overflow-hidden">
+        <div class="flex border-b border-white/10">
+          <button onclick="switchTab('opencode')" id="tab-opencode" class="px-5 py-3 text-sm font-medium border-b-2 transition-all duration-200 tab-active">
+            OpenCode Config
+          </button>
+          <button onclick="switchTab('vllm')" id="tab-vllm" class="px-5 py-3 text-sm font-medium border-b-2 transition-all duration-200 tab-inactive">
+            vLLM Args
+          </button>
+        </div>
+
+        <!-- Tab Content: OpenCode -->
+        <div id="content-opencode" class="p-5 relative">
+          <button onclick="copyCode('opencode-code')" class="copy-btn absolute top-3 right-3 px-3 py-1.5 text-xs font-medium rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all">
+            Copy
+          </button>
+          <pre id="opencode-code" class="text-sm font-mono text-gray-300 overflow-x-auto leading-relaxed"><code>{
+  "provider": {
+    "type": "openai-compatible",
+    "name": "vllm-qwen",
+    "baseURL": "http://vllm-svc:8000/v1",
+    "apiKey": "not-needed"
+  },
+  "model": "Qwen/Qwen3-32B",
+  "context": {
+    "maxTokens": 131072
+  },
+  "tools": {
+    "enabled": true,
+    "parser": "hermes"
+  },
+  "mcpServers": {}
+}</code></pre>
+        </div>
+
+        <!-- Tab Content: vLLM -->
+        <div id="content-vllm" class="p-5 relative hidden">
+          <button onclick="copyCode('vllm-code')" class="copy-btn absolute top-3 right-3 px-3 py-1.5 text-xs font-medium rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all">
+            Copy
+          </button>
+          <pre id="vllm-code" class="text-sm font-mono text-gray-300 overflow-x-auto leading-relaxed"><code># vLLM deployment args for A100 (2× 80GB)
+python -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen3-32B \
+  --served-model-name Qwen/Qwen3-32B \
+  --max-model-len 131072 \
+  --tensor-parallel-size 2 \
+  --gpu-memory-utilization 0.92 \
+  --enable-auto-tool-choice \
+  --tool-call-parser hermes \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --trust-remote-code</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Validated vs What's Next -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">5</div>
+        <h2 class="text-2xl font-bold text-white dark:text-white text-gray-900">What's Validated vs What's Next</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Validated -->
+        <div class="glass rounded-xl p-6 border-l-4 border-l-green-500 space-y-4">
+          <h3 class="text-lg font-bold text-green-400 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            Validated
+          </h3>
+          <ul class="space-y-3">
+            <li class="flex items-start gap-3">
+              <span class="mt-0.5 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center shrink-0"><svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>
+              <span class="text-sm text-gray-300 dark:text-gray-300 text-gray-700">MLflow tracking with PostgreSQL backend on OpenShift</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="mt-0.5 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center shrink-0"><svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>
+              <span class="text-sm text-gray-300 dark:text-gray-300 text-gray-700">Model download via huggingface_hub Job + PVC mount</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="mt-0.5 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center shrink-0"><svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>
+              <span class="text-sm text-gray-300 dark:text-gray-300 text-gray-700">vLLM serving with tool calling (hermes parser)</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="mt-0.5 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center shrink-0"><svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>
+              <span class="text-sm text-gray-300 dark:text-gray-300 text-gray-700">OpenCode connectivity to vLLM (openai-compatible provider)</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="mt-0.5 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center shrink-0"><svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>
+              <span class="text-sm text-gray-300 dark:text-gray-300 text-gray-700">Eval-harness setup with 4 runners (PR #90)</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- What's Next -->
+        <div class="glass rounded-xl p-6 border-l-4 border-l-amber-500 space-y-4">
+          <h3 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
+            Next on IDM
+          </h3>
+          <ol class="space-y-3 list-none">
+            <li class="flex items-start gap-3">
+              <span class="mt-0.5 w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-xs font-bold text-amber-400 shrink-0">1</span>
+              <span class="text-sm text-gray-300 dark:text-gray-300 text-gray-700">Deploy Qwen3-32B on A100 cluster with 128K context</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="mt-0.5 w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-xs font-bold text-amber-400 shrink-0">2</span>
+              <span class="text-sm text-gray-300 dark:text-gray-300 text-gray-700">Run Claude baseline eval (proprietary ceiling measurement)</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="mt-0.5 w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-xs font-bold text-amber-400 shrink-0">3</span>
+              <span class="text-sm text-gray-300 dark:text-gray-300 text-gray-700">Run open-weight eval with Qwen3-32B on same tasks</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="mt-0.5 w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-xs font-bold text-amber-400 shrink-0">4</span>
+              <span class="text-sm text-gray-300 dark:text-gray-300 text-gray-700">Run eval-optimize loop (iterative skill improvement)</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="mt-0.5 w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-xs font-bold text-amber-400 shrink-0">5</span>
+              <span class="text-sm text-gray-300 dark:text-gray-300 text-gray-700">Generate comparison report: open-weight vs proprietary</span>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quiz Section -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white font-bold text-sm">?</div>
+        <h2 class="text-2xl font-bold text-white dark:text-white text-gray-900">Knowledge Check</h2>
+      </div>
+
+      <div class="glass rounded-xl p-6 space-y-5" id="quizContainer">
+        <p class="text-lg font-medium text-white dark:text-white text-gray-900">
+          Why can't we run full agentic evaluation on the T4 cluster?
+        </p>
+        <div class="space-y-3" id="quizOptions">
+          <button onclick="checkAnswer('A')" class="quiz-option w-full text-left px-5 py-3 rounded-xl glass glass-hover flex items-center gap-3 transition-all border border-transparent" data-answer="A">
+            <span class="w-7 h-7 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-xs font-bold text-cyan-400 shrink-0">A</span>
+            <span class="text-sm text-gray-300 dark:text-gray-300 text-gray-700">T4 GPUs are too slow for inference</span>
+          </button>
+          <button onclick="checkAnswer('B')" class="quiz-option w-full text-left px-5 py-3 rounded-xl glass glass-hover flex items-center gap-3 transition-all border border-transparent" data-answer="B">
+            <span class="w-7 h-7 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-xs font-bold text-cyan-400 shrink-0">B</span>
+            <span class="text-sm text-gray-300 dark:text-gray-300 text-gray-700">OpenCode needs ~40K context but Qwen 3B max is 32K on T4</span>
+          </button>
+          <button onclick="checkAnswer('C')" class="quiz-option w-full text-left px-5 py-3 rounded-xl glass glass-hover flex items-center gap-3 transition-all border border-transparent" data-answer="C">
+            <span class="w-7 h-7 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-xs font-bold text-cyan-400 shrink-0">C</span>
+            <span class="text-sm text-gray-300 dark:text-gray-300 text-gray-700">MLflow is not deployed on T4</span>
+          </button>
+          <button onclick="checkAnswer('D')" class="quiz-option w-full text-left px-5 py-3 rounded-xl glass glass-hover flex items-center gap-3 transition-all border border-transparent" data-answer="D">
+            <span class="w-7 h-7 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-xs font-bold text-cyan-400 shrink-0">D</span>
+            <span class="text-sm text-gray-300 dark:text-gray-300 text-gray-700">vLLM doesn't support tool calling</span>
+          </button>
+        </div>
+        <div id="quizFeedback" class="hidden rounded-xl p-4 text-sm"></div>
+      </div>
+    </section>
+
+    <!-- Bottom Navigation -->
+    <nav class="flex items-center justify-between pt-8 border-t border-white/10">
+      <a href="06-risks.html" class="group flex items-center gap-3 px-5 py-3 rounded-xl glass glass-hover transition-all">
+        <svg class="w-4 h-4 text-gray-400 group-hover:text-cyan-400 transition-colors transform group-hover:-translate-x-1 duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        <div>
+          <div class="text-xs text-gray-500">Previous</div>
+          <div class="text-sm font-medium text-gray-300 dark:text-gray-300 text-gray-700 group-hover:text-cyan-400 transition-colors">06 — Risks & Recommendations</div>
+        </div>
+      </a>
+      <a href="../index.html" class="group flex items-center gap-3 px-5 py-3 rounded-xl glass glass-hover transition-all">
+        <div class="text-right">
+          <div class="text-xs text-gray-500">Return to</div>
+          <div class="text-sm font-medium text-gray-300 dark:text-gray-300 text-gray-700 group-hover:text-cyan-400 transition-colors">Home / Index</div>
+        </div>
+        <svg class="w-4 h-4 text-gray-400 group-hover:text-cyan-400 transition-colors transform group-hover:translate-x-1 duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </a>
+    </nav>
+
+  </main>
+
+  <script>
+    // Mark page as visited
+    (function() {
+      const visited = JSON.parse(localStorage.getItem('teach-me-visited') || '[]');
+      if (!visited.includes('07')) {
+        visited.push('07');
+        localStorage.setItem('teach-me-visited', JSON.stringify(visited));
+      }
+      document.getElementById('visitBadge').classList.remove('hidden');
+    })();
+
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const icon = document.getElementById('themeIcon');
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        icon.textContent = '☀️';
+        localStorage.setItem('teach-me-theme', 'light');
+      } else {
+        html.classList.add('dark');
+        icon.textContent = '🌙';
+        localStorage.setItem('teach-me-theme', 'dark');
+      }
+    }
+
+    // Restore theme
+    (function() {
+      const saved = localStorage.getItem('teach-me-theme');
+      const icon = document.getElementById('themeIcon');
+      if (saved === 'light') {
+        document.documentElement.classList.remove('dark');
+        icon.textContent = '☀️';
+      }
+    })();
+
+    // Tab switching
+    function switchTab(tab) {
+      document.getElementById('content-opencode').classList.toggle('hidden', tab !== 'opencode');
+      document.getElementById('content-vllm').classList.toggle('hidden', tab !== 'vllm');
+      document.getElementById('tab-opencode').className = 'px-5 py-3 text-sm font-medium border-b-2 transition-all duration-200 ' + (tab === 'opencode' ? 'tab-active' : 'tab-inactive');
+      document.getElementById('tab-vllm').className = 'px-5 py-3 text-sm font-medium border-b-2 transition-all duration-200 ' + (tab === 'vllm' ? 'tab-active' : 'tab-inactive');
+    }
+
+    // Copy code
+    function copyCode(id) {
+      const code = document.getElementById(id).textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        const btn = document.querySelector(`[onclick="copyCode('${id}')"]`);
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('text-green-400', 'border-green-500/30');
+        setTimeout(() => { btn.textContent = original; btn.classList.remove('text-green-400', 'border-green-500/30'); }, 2000);
+      });
+    }
+
+    // Quiz
+    let quizAnswered = false;
+    function checkAnswer(selected) {
+      if (quizAnswered) return;
+      quizAnswered = true;
+
+      const correct = 'B';
+      const options = document.querySelectorAll('.quiz-option');
+      options.forEach(opt => {
+        opt.classList.add('quiz-locked');
+        const answer = opt.getAttribute('data-answer');
+        if (answer === correct) {
+          opt.classList.add('quiz-correct');
+        } else if (answer === selected && selected !== correct) {
+          opt.classList.add('quiz-wrong');
+        }
+      });
+
+      const feedback = document.getElementById('quizFeedback');
+      feedback.classList.remove('hidden');
+      if (selected === correct) {
+        feedback.className = 'rounded-xl p-4 text-sm bg-green-950/30 border border-green-500/20 text-green-300';
+        feedback.innerHTML = '<strong>Correct!</strong> Agentic sessions accumulate ~39K+ tokens of context (tool calls, file reads, conversation). Qwen 3B on T4 can only serve 32K tokens due to VRAM constraints — the session aborts mid-task. The A100 with Qwen3-32B supports 128K context, solving this.';
+      } else {
+        feedback.className = 'rounded-xl p-4 text-sm bg-red-950/30 border border-red-500/20 text-red-300';
+        feedback.innerHTML = '<strong>Not quite.</strong> The key blocker is context length: agentic sessions need ~40K tokens but Qwen 3B on T4 maxes out at 32K. Speed (A) is a factor but not the blocker. MLflow (C) <em>is</em> deployed. Tool calling (D) works with <code>--enable-auto-tool-choice</code>.';
+      }
+    }
+  </script>
+
+</body>
+</html>

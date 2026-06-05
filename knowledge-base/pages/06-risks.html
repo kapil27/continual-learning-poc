@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Risks, Gaps & Recommendations — Agentic Continual Learning</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], mono: ['Fira Code', 'monospace'] },
+        }
+      }
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); }
+    .glass-hover:hover { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.15); }
+    html:not(.dark) .glass { background: rgba(255,255,255,0.65); border-color: rgba(0,0,0,0.08); }
+    html:not(.dark) .glass-hover:hover { background: rgba(255,255,255,0.80); }
+    .fade-in { animation: fadeIn 0.5s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    details summary { cursor: pointer; list-style: none; }
+    details summary::-webkit-details-marker { display: none; }
+    details[open] .chevron { transform: rotate(90deg); }
+    .severity-high { border-left-color: #ef4444; }
+    .severity-medium { border-left-color: #f59e0b; }
+    .severity-low { border-left-color: #22c55e; }
+    .severity-low-medium { border-left-color: #84cc16; }
+    .card-glow-red:hover { box-shadow: 0 0 30px rgba(239,68,68,0.12); }
+    .card-glow-amber:hover { box-shadow: 0 0 30px rgba(245,158,11,0.12); }
+    .card-glow-blue:hover { box-shadow: 0 0 30px rgba(59,130,246,0.12); }
+    .checklist-item input:checked + span { text-decoration: line-through; opacity: 0.6; }
+    .priority-stack > div { transition: all 0.2s; }
+    .priority-stack > div:hover { transform: translateX(8px); }
+  </style>
+</head>
+<body class="bg-gray-950 dark:bg-gray-950 bg-gray-50 text-gray-100 dark:text-gray-100 text-gray-900 font-sans min-h-screen transition-colors duration-300">
+
+  <!-- Sticky Navbar -->
+  <nav class="sticky top-0 z-50 glass border-b border-white/10 dark:border-white/10 border-gray-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2 text-sm">
+        <a href="../index.html" class="text-rose-400 hover:text-rose-300 transition-colors">🏠 Home</a>
+        <span class="text-gray-500">/</span>
+        <span class="text-gray-400 dark:text-gray-400 text-gray-600">Pages</span>
+        <span class="text-gray-500">/</span>
+        <span class="text-rose-300 dark:text-rose-300 text-rose-700 font-medium">06 — Risks, Gaps & Recommendations</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="visitBadge" class="hidden text-xs bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full border border-rose-500/30">✓ Visited</span>
+        <button onclick="toggleTheme()" class="p-2 rounded-lg glass glass-hover transition-all duration-200 hover:scale-105" title="Toggle theme">
+          <span id="themeIcon" class="text-lg">🌙</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-10 fade-in">
+
+    <!-- Page Header -->
+    <header class="text-center space-y-4">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full glass text-rose-400 text-xs font-medium tracking-wider uppercase">
+        <span>Module 06</span>
+        <span class="w-1.5 h-1.5 bg-rose-400 rounded-full animate-pulse"></span>
+        <span>Risk Analysis</span>
+      </div>
+      <h1 class="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-rose-400 via-red-400 to-orange-400 bg-clip-text text-transparent leading-tight">
+        Risks, Gaps & Recommendations
+      </h1>
+      <p class="text-lg text-gray-400 dark:text-gray-400 text-gray-600 max-w-2xl mx-auto">
+        What can go wrong, what's missing, and what to do about it — a risk-driven roadmap.
+      </p>
+    </header>
+
+    <!-- Risk Register -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-rose-300 dark:text-rose-300 text-rose-700 flex items-center gap-2">
+        <span class="text-3xl">🚨</span> Risk Register
+      </h2>
+      <div class="space-y-3">
+
+        <!-- R1 -->
+        <details class="glass rounded-2xl overflow-hidden severity-high border-l-4 card-glow-red transition-all duration-300">
+          <summary class="px-5 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="chevron text-gray-500 transition-transform duration-200">▶</span>
+              <span class="text-xs font-mono bg-red-500/20 text-red-300 px-2 py-0.5 rounded-full">HIGH</span>
+              <span class="font-bold text-white dark:text-white text-gray-900">R1: Loop Interference</span>
+            </div>
+            <span class="text-xs text-gray-500 font-mono">Click to expand</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 dark:border-white/5 border-gray-200 pt-4">
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Description</h4>
+              <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">Outer loop (prompt optimization) and inner loop (weight optimization) interfere when running concurrently. Prompts optimized for model v1 may degrade performance on model v2.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Impact</h4>
+              <p class="text-sm text-red-300 dark:text-red-300 text-red-700">Wasted compute cycles, oscillating quality, inability to attribute improvements to either loop. Could undermine the entire two-loop design.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Mitigation</h4>
+              <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">Version-lock model weights during outer-loop passes. Run loops on alternating schedules (e.g., outer loop daily, inner loop weekly). Gate weight updates on eval regression checks. Maintain a "known-good" config snapshot.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Residual Risk</h4>
+              <p class="text-sm text-amber-300 dark:text-amber-300 text-amber-700">Medium — scheduling discipline reduces but doesn't eliminate the risk. Prompt–weight co-adaptation remains an open research question.</p>
+            </div>
+          </div>
+        </details>
+
+        <!-- R2 -->
+        <details class="glass rounded-2xl overflow-hidden severity-high border-l-4 card-glow-red transition-all duration-300">
+          <summary class="px-5 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="chevron text-gray-500 transition-transform duration-200">▶</span>
+              <span class="text-xs font-mono bg-red-500/20 text-red-300 px-2 py-0.5 rounded-full">HIGH</span>
+              <span class="font-bold text-white dark:text-white text-gray-900">R2: Eval Noise</span>
+            </div>
+            <span class="text-xs text-gray-500 font-mono">Click to expand</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 dark:border-white/5 border-gray-200 pt-4">
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Description</h4>
+              <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">LLM judge scores have inherent variance from temperature, prompt sensitivity, and non-deterministic generation. Single-run eval results can be misleading.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Impact</h4>
+              <p class="text-sm text-red-300 dark:text-red-300 text-red-700">False positives (shipping a regression) or false negatives (rejecting a good model). Training decisions based on noise rather than signal.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Mitigation</h4>
+              <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">3x runs per eval, take median score. Report variance. If variance > 15%, investigate judge prompt or increase sample size. Use CODE judges (deterministic) alongside LLM judges.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Residual Risk</h4>
+              <p class="text-sm text-amber-300 dark:text-amber-300 text-amber-700">Low — 3x median is well-validated. Remaining risk is systematic judge bias, addressable via calibration against human review.</p>
+            </div>
+          </div>
+        </details>
+
+        <!-- R3 -->
+        <details class="glass rounded-2xl overflow-hidden severity-high border-l-4 card-glow-red transition-all duration-300">
+          <summary class="px-5 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="chevron text-gray-500 transition-transform duration-200">▶</span>
+              <span class="text-xs font-mono bg-red-500/20 text-red-300 px-2 py-0.5 rounded-full">HIGH</span>
+              <span class="font-bold text-white dark:text-white text-gray-900">R3: Tool-Use Fidelity</span>
+            </div>
+            <span class="text-xs text-gray-500 font-mono">Click to expand</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 dark:border-white/5 border-gray-200 pt-4">
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Description</h4>
+              <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">Fine-tuned open models may generate syntactically correct but semantically incorrect tool calls — wrong arguments, hallucinated tool names, or invalid schemas.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Impact</h4>
+              <p class="text-sm text-red-300 dark:text-red-300 text-red-700">Silent failures in production — agent appears to work but produces wrong results. Especially dangerous for stateful tools (file writes, API calls, cluster mutations).</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Mitigation</h4>
+              <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">Include tool-call-specific eval judges (schema validation, arg completeness, call sequence checks). Use constrained decoding for tool calls. Include tool-call examples prominently in SFT data.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Residual Risk</h4>
+              <p class="text-sm text-amber-300 dark:text-amber-300 text-amber-700">Medium — constrained decoding helps syntax but not semantics. Semantic tool-use correctness remains hard to evaluate automatically.</p>
+            </div>
+          </div>
+        </details>
+
+        <!-- R4 -->
+        <details class="glass rounded-2xl overflow-hidden severity-medium border-l-4 card-glow-amber transition-all duration-300">
+          <summary class="px-5 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="chevron text-gray-500 transition-transform duration-200">▶</span>
+              <span class="text-xs font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">MEDIUM</span>
+              <span class="font-bold text-white dark:text-white text-gray-900">R4: Cross-Provider Legality</span>
+            </div>
+            <span class="text-xs text-gray-500 font-mono">Click to expand</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 dark:border-white/5 border-gray-200 pt-4">
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Description</h4>
+              <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">Using Claude Opus outputs as training data for open-weight models may violate Anthropic's Terms of Service regarding model distillation and competitive training.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Impact</h4>
+              <p class="text-sm text-amber-300 dark:text-amber-300 text-amber-700">Legal exposure. May need to switch frontier model to one with permissive output licensing (e.g., use Nemotron or self-hosted frontier model).</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Mitigation</h4>
+              <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">Legal review of Anthropic ToS and output ownership clauses. Consider using only self-hosted models for trace generation. Evaluate Nemotron or other permissive alternatives as the frontier model.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Residual Risk</h4>
+              <p class="text-sm text-yellow-300 dark:text-yellow-300 text-yellow-700">Low if using self-hosted frontier model. Medium if relying on Claude outputs for training data.</p>
+            </div>
+          </div>
+        </details>
+
+        <!-- R5 -->
+        <details class="glass rounded-2xl overflow-hidden severity-medium border-l-4 card-glow-amber transition-all duration-300">
+          <summary class="px-5 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="chevron text-gray-500 transition-transform duration-200">▶</span>
+              <span class="text-xs font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">MEDIUM</span>
+              <span class="font-bold text-white dark:text-white text-gray-900">R5: Multi-Turn Credit Assignment</span>
+            </div>
+            <span class="text-xs text-gray-500 font-mono">Click to expand</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 dark:border-white/5 border-gray-200 pt-4">
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Description</h4>
+              <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">Agent tasks span many turns with tool calls. A final success/failure signal at the end of a trajectory doesn't tell the model which specific turns were good or bad.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Impact</h4>
+              <p class="text-sm text-amber-300 dark:text-amber-300 text-amber-700">Noisy reward signals. SFT treats all turns equally; DPO/GRPO need turn-level or sub-trajectory preferences. Training may reinforce bad intermediate steps.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Mitigation</h4>
+              <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">Use per-span judge annotations (MLflow assessments at span level, not just trace level). Implement step-level reward modeling. Consider MCTS-style trajectory exploration for better credit assignment.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Residual Risk</h4>
+              <p class="text-sm text-amber-300 dark:text-amber-300 text-amber-700">Medium — this is an active research area. Practical per-step judging is expensive and noisy.</p>
+            </div>
+          </div>
+        </details>
+
+        <!-- R6 -->
+        <details class="glass rounded-2xl overflow-hidden severity-medium border-l-4 card-glow-amber transition-all duration-300">
+          <summary class="px-5 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="chevron text-gray-500 transition-transform duration-200">▶</span>
+              <span class="text-xs font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">MEDIUM</span>
+              <span class="font-bold text-white dark:text-white text-gray-900">R6: EvalHub Adapter</span>
+            </div>
+            <span class="text-xs text-gray-500 font-mono">Click to expand</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 dark:border-white/5 border-gray-200 pt-4">
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Description</h4>
+              <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">The agent-eval-harness needs to plug into EvalHub as a provider. No adapter exists — the harness uses its own CLI and config format (eval.yaml) that differs from EvalHub's orchestration model.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Impact</h4>
+              <p class="text-sm text-amber-300 dark:text-amber-300 text-amber-700">Without the adapter, agent skill evaluation runs separately from model evaluation (lm-evaluation-harness) and safety evaluation (Garak). No unified dashboard. Manual coordination required.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Mitigation</h4>
+              <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">Build a thin EvalHub provider that wraps eval-harness CLI calls and publishes results to the shared MLflow experiment. Start with a script-based integration; formalize later.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Residual Risk</h4>
+              <p class="text-sm text-yellow-300 dark:text-yellow-300 text-yellow-700">Low — engineering effort, not a fundamental challenge. 1–2 sprint effort.</p>
+            </div>
+          </div>
+        </details>
+
+        <!-- R7 -->
+        <details class="glass rounded-2xl overflow-hidden severity-low-medium border-l-4 card-glow-amber transition-all duration-300">
+          <summary class="px-5 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="chevron text-gray-500 transition-transform duration-200">▶</span>
+              <span class="text-xs font-mono bg-lime-500/20 text-lime-300 px-2 py-0.5 rounded-full">LOW-MED</span>
+              <span class="font-bold text-white dark:text-white text-gray-900">R7: Trace Schema Gap</span>
+            </div>
+            <span class="text-xs text-gray-500 font-mono">Click to expand</span>
+          </summary>
+          <div class="px-5 pb-5 space-y-3 border-t border-white/5 dark:border-white/5 border-gray-200 pt-4">
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Description</h4>
+              <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">MLflow traces use OpenTelemetry hierarchical span format. Training pipelines need flat JSONL with messages arrays. A converter must be built to bridge this gap.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Impact</h4>
+              <p class="text-sm text-amber-300 dark:text-amber-300 text-amber-700">Blocks all training data preparation. Without the converter, traces cannot be used for SFT/DPO/GRPO regardless of volume.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Mitigation</h4>
+              <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600">Build <code class="font-mono bg-lime-500/10 px-1 rounded">trace-to-training</code> converter as a standalone Python package. Start with SFT format (simplest), extend to DPO/GRPO. Include unit tests with real trace samples.</p>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-gray-500 mb-1">Residual Risk</h4>
+              <p class="text-sm text-yellow-300 dark:text-yellow-300 text-yellow-700">Low — well-scoped engineering task. Main risk is edge cases in span tree traversal (recursive tools, parallel branches).</p>
+            </div>
+          </div>
+        </details>
+
+      </div>
+      <button onclick="explainSimpler('What are the highest risks in the agentic continual learning architecture and why?')" class="mt-2 text-xs px-3 py-1.5 rounded-lg glass glass-hover text-rose-400 hover:text-rose-300 transition-all duration-200 cursor-pointer">
+        💡 Explain Simpler
+      </button>
+    </section>
+
+    <!-- Gap Summary Table -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-amber-300 dark:text-amber-300 text-amber-700 flex items-center gap-2">
+        <span class="text-3xl">📋</span> Gap Summary
+      </h2>
+      <div class="glass rounded-2xl overflow-hidden card-glow-amber transition-all duration-300">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-white/10 dark:border-white/10 border-gray-200 bg-amber-500/10">
+                <th class="text-left px-5 py-3 font-semibold text-amber-300 dark:text-amber-300 text-amber-700">Gap</th>
+                <th class="text-left px-5 py-3 font-semibold text-amber-300 dark:text-amber-300 text-amber-700">Severity</th>
+                <th class="text-left px-5 py-3 font-semibold text-amber-300 dark:text-amber-300 text-amber-700">Owner</th>
+                <th class="text-left px-5 py-3 font-semibold text-amber-300 dark:text-amber-300 text-amber-700">Sprint</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 dark:divide-white/5 divide-gray-100">
+              <tr class="hover:bg-amber-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">trace-to-training converter</td>
+                <td class="px-5 py-3"><span class="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded-full">HIGH</span></td>
+                <td class="px-5 py-3 text-gray-400">Data Engineering</td>
+                <td class="px-5 py-3 font-mono text-xs">Sprint 2</td>
+              </tr>
+              <tr class="hover:bg-amber-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">EvalHub adapter for agent-eval-harness</td>
+                <td class="px-5 py-3"><span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">MEDIUM</span></td>
+                <td class="px-5 py-3 text-gray-400">Eval Team</td>
+                <td class="px-5 py-3 font-mono text-xs">Sprint 2–3</td>
+              </tr>
+              <tr class="hover:bg-amber-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Loop scheduling & interference protocol</td>
+                <td class="px-5 py-3"><span class="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded-full">HIGH</span></td>
+                <td class="px-5 py-3 text-gray-400">Architecture</td>
+                <td class="px-5 py-3 font-mono text-xs">Sprint 1–2</td>
+              </tr>
+              <tr class="hover:bg-amber-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Judge calibration dataset</td>
+                <td class="px-5 py-3"><span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">MEDIUM</span></td>
+                <td class="px-5 py-3 text-gray-400">ML Eng</td>
+                <td class="px-5 py-3 font-mono text-xs">Sprint 1</td>
+              </tr>
+              <tr class="hover:bg-amber-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Compression-chain lineage in model registry</td>
+                <td class="px-5 py-3"><span class="text-xs bg-lime-500/20 text-lime-300 px-2 py-0.5 rounded-full">LOW</span></td>
+                <td class="px-5 py-3 text-gray-400">Platform</td>
+                <td class="px-5 py-3 font-mono text-xs">Sprint 3+</td>
+              </tr>
+              <tr class="hover:bg-amber-500/5 transition-colors">
+                <td class="px-5 py-3 font-medium">Legal review of cross-provider training</td>
+                <td class="px-5 py-3"><span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">MEDIUM</span></td>
+                <td class="px-5 py-3 text-gray-400">Legal / PM</td>
+                <td class="px-5 py-3 font-mono text-xs">Sprint 1</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sprint 2 Priorities -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-blue-300 dark:text-blue-300 text-blue-700 flex items-center gap-2">
+        <span class="text-3xl">🎯</span> Sprint 2 Priority Stack
+      </h2>
+      <div class="priority-stack space-y-3">
+        <div class="glass rounded-xl p-4 border-l-4 border-red-400 card-glow-red transition-all duration-300 flex items-center gap-4">
+          <span class="text-2xl font-black text-red-400 w-12 text-center shrink-0">P0</span>
+          <div class="flex-1">
+            <p class="font-semibold text-white dark:text-white text-gray-900">trace-to-training converter (SFT format)</p>
+            <p class="text-xs text-gray-400 mt-1">Build the MLflow span tree → flat JSONL pipeline. Start with SFT, the simplest format.</p>
+          </div>
+          <span class="text-xs bg-red-500/10 text-red-300 px-2 py-1 rounded-lg font-mono shrink-0">~5 days</span>
+        </div>
+        <div class="glass rounded-xl p-4 border-l-4 border-orange-400 card-glow-amber transition-all duration-300 flex items-center gap-4">
+          <span class="text-2xl font-black text-orange-400 w-12 text-center shrink-0">P1</span>
+          <div class="flex-1">
+            <p class="font-semibold text-white dark:text-white text-gray-900">First SFT fine-tune run (Llama 8B)</p>
+            <p class="text-xs text-gray-400 mt-1">End-to-end: extract traces → convert → train → evaluate. Small model, small dataset, prove the loop.</p>
+          </div>
+          <span class="text-xs bg-orange-500/10 text-orange-300 px-2 py-1 rounded-lg font-mono shrink-0">~5 days</span>
+        </div>
+        <div class="glass rounded-xl p-4 border-l-4 border-amber-400 card-glow-amber transition-all duration-300 flex items-center gap-4">
+          <span class="text-2xl font-black text-amber-400 w-12 text-center shrink-0">P2</span>
+          <div class="flex-1">
+            <p class="font-semibold text-white dark:text-white text-gray-900">Loop scheduling protocol</p>
+            <p class="text-xs text-gray-400 mt-1">Define the coordination contract between outer and inner loops. Version-locking, schedule cadence, gate criteria.</p>
+          </div>
+          <span class="text-xs bg-amber-500/10 text-amber-300 px-2 py-1 rounded-lg font-mono shrink-0">~3 days</span>
+        </div>
+        <div class="glass rounded-xl p-4 border-l-4 border-blue-400 card-glow-blue transition-all duration-300 flex items-center gap-4">
+          <span class="text-2xl font-black text-blue-400 w-12 text-center shrink-0">P3</span>
+          <div class="flex-1">
+            <p class="font-semibold text-white dark:text-white text-gray-900">EvalHub adapter (thin wrapper)</p>
+            <p class="text-xs text-gray-400 mt-1">Script that wraps eval-harness CLI calls and publishes to shared MLflow experiment. Minimal viable integration.</p>
+          </div>
+          <span class="text-xs bg-blue-500/10 text-blue-300 px-2 py-1 rounded-lg font-mono shrink-0">~3 days</span>
+        </div>
+        <div class="glass rounded-xl p-4 border-l-4 border-indigo-400 card-glow-blue transition-all duration-300 flex items-center gap-4">
+          <span class="text-2xl font-black text-indigo-400 w-12 text-center shrink-0">P4</span>
+          <div class="flex-1">
+            <p class="font-semibold text-white dark:text-white text-gray-900">DPO data pipeline extension</p>
+            <p class="text-xs text-gray-400 mt-1">Extend trace converter to produce chosen/rejected pairs from judge scores. Requires pairing logic and score thresholds.</p>
+          </div>
+          <span class="text-xs bg-indigo-500/10 text-indigo-300 px-2 py-1 rounded-lg font-mono shrink-0">~5 days</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 Technical Decisions -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-cyan-300 dark:text-cyan-300 text-cyan-700 flex items-center gap-2">
+        <span class="text-3xl">⚡</span> Key Technical Decisions
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="glass rounded-2xl p-5 card-glow-blue transition-all duration-300 hover:scale-[1.01] border-t-4 border-cyan-400">
+          <h3 class="font-bold text-cyan-300 dark:text-cyan-300 text-cyan-700 mb-2">1. Agent CLI</h3>
+          <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600 mb-2">Which CLI harness to use for agent execution in the inner loop?</p>
+          <div class="text-xs space-y-1">
+            <div class="flex justify-between"><span class="text-gray-400">Option A</span><span class="text-cyan-400">OpenCode CLI (open-source, controllable)</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Option B</span><span class="text-cyan-400">Claude Code CLI (proven but proprietary)</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Lean</span><span class="text-emerald-400 font-medium">OpenCode — avoids vendor lock-in</span></div>
+          </div>
+        </div>
+        <div class="glass rounded-2xl p-5 card-glow-blue transition-all duration-300 hover:scale-[1.01] border-t-4 border-blue-400">
+          <h3 class="font-bold text-blue-300 dark:text-blue-300 text-blue-700 mb-2">2. FT Objective</h3>
+          <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600 mb-2">Which fine-tuning approach to start with?</p>
+          <div class="text-xs space-y-1">
+            <div class="flex justify-between"><span class="text-gray-400">Option A</span><span class="text-blue-400">SFT (simplest data requirements)</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Option B</span><span class="text-blue-400">DPO (needs pairs, better alignment)</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Option C</span><span class="text-blue-400">GRPO (needs groups, strongest signal)</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Lean</span><span class="text-emerald-400 font-medium">SFT first → DPO later</span></div>
+          </div>
+        </div>
+        <div class="glass rounded-2xl p-5 card-glow-blue transition-all duration-300 hover:scale-[1.01] border-t-4 border-indigo-400">
+          <h3 class="font-bold text-indigo-300 dark:text-indigo-300 text-indigo-700 mb-2">3. Skill Choice</h3>
+          <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600 mb-2">Which skill to use for the POC baseline and first fine-tune?</p>
+          <div class="text-xs space-y-1">
+            <div class="flex justify-between"><span class="text-gray-400">Criterion</span><span class="text-indigo-400">Needs existing traces, clear success metric</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Candidates</span><span class="text-indigo-400">Jenkins triage, Jira creation, code review</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Lean</span><span class="text-emerald-400 font-medium">Jenkins triage — highest volume</span></div>
+          </div>
+        </div>
+        <div class="glass rounded-2xl p-5 card-glow-blue transition-all duration-300 hover:scale-[1.01] border-t-4 border-violet-400">
+          <h3 class="font-bold text-violet-300 dark:text-violet-300 text-violet-700 mb-2">4. Eval Reliability</h3>
+          <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600 mb-2">How to ensure eval results are trustworthy?</p>
+          <div class="text-xs space-y-1">
+            <div class="flex justify-between"><span class="text-gray-400">Protocol</span><span class="text-violet-400">3x runs, median score, variance report</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Threshold</span><span class="text-violet-400">&lt; 15% variance to trust the result</span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Backup</span><span class="text-violet-400">CODE judges as deterministic anchors</span></div>
+          </div>
+        </div>
+        <div class="glass rounded-2xl p-5 card-glow-blue transition-all duration-300 hover:scale-[1.01] border-t-4 border-teal-400 md:col-span-2">
+          <h3 class="font-bold text-teal-300 dark:text-teal-300 text-teal-700 mb-2">5. Loop Scheduling</h3>
+          <p class="text-sm text-gray-300 dark:text-gray-300 text-gray-600 mb-2">How to coordinate the two optimization loops to avoid interference?</p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs mt-3">
+            <div class="bg-black/10 dark:bg-black/10 bg-gray-100 rounded-lg p-3">
+              <span class="text-teal-400 font-medium">Outer Loop</span>
+              <p class="text-gray-400 mt-1">Run continuously (hourly/daily). Version-lock model weights. No concurrent inner loop runs allowed.</p>
+            </div>
+            <div class="bg-black/10 dark:bg-black/10 bg-gray-100 rounded-lg p-3">
+              <span class="text-teal-400 font-medium">Inner Loop</span>
+              <p class="text-gray-400 mt-1">Run periodically (daily/weekly). Pause outer loop during weight update. Eval gate before traffic shift.</p>
+            </div>
+            <div class="bg-black/10 dark:bg-black/10 bg-gray-100 rounded-lg p-3">
+              <span class="text-teal-400 font-medium">Coordination</span>
+              <p class="text-gray-400 mt-1">Shared state via MLflow tags. Outer loop reads model version tag. Inner loop sets "training-in-progress" flag.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- POC Success Criteria -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-emerald-300 dark:text-emerald-300 text-emerald-700 flex items-center gap-2">
+        <span class="text-3xl">✅</span> POC Success Criteria
+      </h2>
+      <div class="glass rounded-2xl p-6 card-glow-blue transition-all duration-300">
+        <p class="text-sm text-gray-400 mb-4">All five criteria must be met for the POC to be considered successful. Check them off as they're achieved.</p>
+        <div class="space-y-3">
+          <label class="checklist-item flex items-start gap-3 cursor-pointer group">
+            <input type="checkbox" class="mt-1 w-4 h-4 rounded accent-emerald-500 cursor-pointer" onchange="saveChecklist()">
+            <span class="text-sm text-gray-200 dark:text-gray-200 text-gray-700 group-hover:text-white dark:group-hover:text-white transition-colors">
+              <strong class="text-emerald-400">SC-1:</strong> Baseline benchmark established — at least one skill evaluated on frontier model with 3x-run median scores and &lt; 15% variance.
+            </span>
+          </label>
+          <label class="checklist-item flex items-start gap-3 cursor-pointer group">
+            <input type="checkbox" class="mt-1 w-4 h-4 rounded accent-emerald-500 cursor-pointer" onchange="saveChecklist()">
+            <span class="text-sm text-gray-200 dark:text-gray-200 text-gray-700 group-hover:text-white dark:group-hover:text-white transition-colors">
+              <strong class="text-emerald-400">SC-2:</strong> End-to-end data pipeline proven — production traces extracted, converted to SFT format, and validated with at least 100 training examples.
+            </span>
+          </label>
+          <label class="checklist-item flex items-start gap-3 cursor-pointer group">
+            <input type="checkbox" class="mt-1 w-4 h-4 rounded accent-emerald-500 cursor-pointer" onchange="saveChecklist()">
+            <span class="text-sm text-gray-200 dark:text-gray-200 text-gray-700 group-hover:text-white dark:group-hover:text-white transition-colors">
+              <strong class="text-emerald-400">SC-3:</strong> First fine-tuned model produced — SFT training run completes on open-weight model with logged metrics in MLflow.
+            </span>
+          </label>
+          <label class="checklist-item flex items-start gap-3 cursor-pointer group">
+            <input type="checkbox" class="mt-1 w-4 h-4 rounded accent-emerald-500 cursor-pointer" onchange="saveChecklist()">
+            <span class="text-sm text-gray-200 dark:text-gray-200 text-gray-700 group-hover:text-white dark:group-hover:text-white transition-colors">
+              <strong class="text-emerald-400">SC-4:</strong> Comparative eval completed — fine-tuned model benchmarked on same skill with same eval suite, results compared to baseline.
+            </span>
+          </label>
+          <label class="checklist-item flex items-start gap-3 cursor-pointer group">
+            <input type="checkbox" class="mt-1 w-4 h-4 rounded accent-emerald-500 cursor-pointer" onchange="saveChecklist()">
+            <span class="text-sm text-gray-200 dark:text-gray-200 text-gray-700 group-hover:text-white dark:group-hover:text-white transition-colors">
+              <strong class="text-emerald-400">SC-5:</strong> Reference architecture documented — Mermaid diagrams, component specs, and deployment guide reviewed by at least one peer.
+            </span>
+          </label>
+        </div>
+        <div id="checklistProgress" class="mt-4 pt-3 border-t border-white/5 dark:border-white/5 border-gray-200">
+          <div class="flex items-center gap-3">
+            <div class="flex-1 h-2 bg-gray-800 dark:bg-gray-800 bg-gray-200 rounded-full overflow-hidden">
+              <div id="progressBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500" style="width:0%"></div>
+            </div>
+            <span id="progressLabel" class="text-xs text-gray-400 font-mono">0 / 5</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Page Navigation -->
+    <nav class="flex items-center justify-between pt-8 border-t border-white/10 dark:border-white/10 border-gray-200">
+      <a href="05-sprint1.html" class="group flex items-center gap-2 glass rounded-xl px-5 py-3 glass-hover transition-all duration-200 hover:scale-[1.02]">
+        <span class="text-lg transition-transform duration-200 group-hover:-translate-x-1">←</span>
+        <div>
+          <div class="text-xs text-gray-500">Previous</div>
+          <div class="text-sm font-medium text-rose-400">05 — Sprint 1</div>
+        </div>
+      </a>
+      <a href="07-implementation.html" class="group flex items-center gap-2 glass rounded-xl px-5 py-3 glass-hover transition-all duration-200 hover:scale-[1.02]">
+        <div class="text-right">
+          <div class="text-xs text-gray-500">Next</div>
+          <div class="text-sm font-medium text-teal-400">07 — Implementation</div>
+        </div>
+        <span class="text-lg transition-transform duration-200 group-hover:translate-x-1">→</span>
+      </a>
+    </nav>
+
+  </main>
+
+  <footer class="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-center text-xs text-gray-600">
+    Agentic Continual Learning Architecture — Knowledge Base
+  </footer>
+
+  <script>
+    // Mark visited
+    (function() {
+      const visited = JSON.parse(localStorage.getItem('teach-me-visited') || '{}');
+      visited['06-risks'] = { at: new Date().toISOString(), count: (visited['06-risks']?.count || 0) + 1 };
+      localStorage.setItem('teach-me-visited', JSON.stringify(visited));
+      document.getElementById('visitBadge').classList.remove('hidden');
+    })();
+
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const icon = document.getElementById('themeIcon');
+      html.classList.toggle('dark');
+      icon.textContent = html.classList.contains('dark') ? '🌙' : '☀️';
+      localStorage.setItem('teach-me-theme', html.classList.contains('dark') ? 'dark' : 'light');
+    }
+    (function() {
+      const saved = localStorage.getItem('teach-me-theme');
+      if (saved === 'light') { document.documentElement.classList.remove('dark'); document.getElementById('themeIcon').textContent = '☀️'; }
+    })();
+
+    // Checklist persistence
+    function saveChecklist() {
+      const checks = [...document.querySelectorAll('.checklist-item input')].map(c => c.checked);
+      localStorage.setItem('teach-me-poc-checklist', JSON.stringify(checks));
+      updateProgress(checks);
+    }
+    function loadChecklist() {
+      const saved = JSON.parse(localStorage.getItem('teach-me-poc-checklist') || '[]');
+      const inputs = document.querySelectorAll('.checklist-item input');
+      saved.forEach((v, i) => { if (inputs[i]) inputs[i].checked = v; });
+      updateProgress(saved);
+    }
+    function updateProgress(checks) {
+      const done = checks.filter(Boolean).length;
+      const total = 5;
+      document.getElementById('progressBar').style.width = `${(done / total) * 100}%`;
+      document.getElementById('progressLabel').textContent = `${done} / ${total}`;
+    }
+    loadChecklist();
+
+    // Explain Simpler
+    async function explainSimpler(question) {
+      try {
+        const res = await fetch('http://localhost:3847/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question, context: 'Risks, Gaps & Recommendations — Agentic Continual Learning Architecture' })
+        });
+        if (!res.ok) throw new Error('Server error');
+        const data = await res.json();
+        alert(data.answer || 'Explanation received — check the console for details.');
+      } catch (e) {
+        alert('Could not reach the explanation server. Make sure localhost:3847 is running.');
+      }
+    }
+  </script>
+</body>
+</html>

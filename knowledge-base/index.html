@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Continual Learning - Knowledge Base</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['Fira Code', 'monospace'] },
+                    animation: {
+                        'fade-in': 'fadeIn 0.6s ease-out',
+                        'slide-up': 'slideUp 0.7s ease-out',
+                        'slide-up-delay': 'slideUp 0.7s ease-out 0.2s both',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: 0 }, '100%': { opacity: 1 } },
+                        slideUp: { '0%': { transform: 'translateY(30px)', opacity: 0 }, '100%': { transform: 'translateY(0)', opacity: 1 } },
+                        glow: { '0%': { boxShadow: '0 0 20px rgba(59,130,246,0.3)' }, '100%': { boxShadow: '0 0 40px rgba(139,92,246,0.5)' } }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        html:not(.dark) .glass { background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(0, 0, 0, 0.08); }
+        .gradient-text { background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero-gradient { background: radial-gradient(ellipse at top, rgba(59,130,246,0.15), transparent 50%), radial-gradient(ellipse at bottom right, rgba(139,92,246,0.1), transparent 50%); }
+        .card-glow:hover { box-shadow: 0 0 30px rgba(59, 130, 246, 0.15); }
+        
+        /* Command palette */
+        .cmd-palette { display: none; }
+        .cmd-palette.active { display: flex; }
+        
+        /* Chat */
+        .chat-panel { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .chat-panel.maximized { width: 90vw !important; height: 85vh !important; bottom: 7.5vh !important; right: 5vw !important; }
+        .typing-dot { animation: typing 1.4s infinite ease-in-out; }
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing { 0%, 100% { transform: translateY(0); opacity: 0.3; } 50% { transform: translateY(-4px); opacity: 1; } }
+    </style>
+</head>
+<body class="antialiased bg-slate-950 text-slate-100 min-h-screen">
+
+    <!-- Command Palette Modal -->
+    <div id="cmdPalette" class="cmd-palette fixed inset-0 z-[100] items-center justify-center">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeCmdPalette()"></div>
+        <div class="relative w-full max-w-xl mx-auto mt-[20vh] glass rounded-2xl shadow-2xl overflow-hidden">
+            <input type="text" id="cmdInput" placeholder="Search across all pages..." class="w-full px-6 py-4 bg-transparent text-lg focus:outline-none text-slate-100 placeholder-slate-500" oninput="searchPages(this.value)">
+            <div id="cmdResults" class="max-h-80 overflow-y-auto border-t border-slate-800"></div>
+        </div>
+    </div>
+
+    <!-- Top Navbar -->
+    <nav class="fixed top-0 w-full h-16 glass z-50 flex items-center justify-between px-8">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">CL</div>
+            <span class="font-semibold text-slate-200 hidden sm:block">Continual Learning</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <button onclick="openCmdPalette()" class="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 text-sm transition-colors border border-slate-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <span class="hidden sm:inline">Search</span>
+                <kbd class="text-xs bg-slate-700 px-1.5 py-0.5 rounded">&#8984;K</kbd>
+            </button>
+            <button onclick="toggleTheme()" class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors">
+                <svg id="themeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-16">
+        <!-- Hero Section -->
+        <section class="hero-gradient py-24 px-8">
+            <div class="max-w-5xl mx-auto text-center animate-fade-in">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-medium mb-8">
+                    <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+                    Deep Dive - Some Context Level
+                </div>
+                <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6">
+                    <span class="gradient-text">Agentic Continual</span><br>
+                    <span class="text-slate-100">Learning Architecture</span>
+                </h1>
+                <p class="text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed mb-8">
+                    A unified system that improves AI agents autonomously from their own production experience. Two nested loops, one shared data plane, progressive model compression.
+                </p>
+                <div class="flex flex-wrap justify-center gap-4 text-sm">
+                    <div class="px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-300">7 Chapters</div>
+                    <div class="px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-300">~60 min read</div>
+                    <div class="px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-300">Interactive Diagrams</div>
+                    <div class="px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-300">AI Assistant</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Progress Bar -->
+        <section class="px-8 py-8 max-w-5xl mx-auto animate-slide-up">
+            <div class="flex justify-between text-sm font-medium mb-3 text-slate-500">
+                <span>Learning Progress</span>
+                <span id="progressText">0% Complete</span>
+            </div>
+            <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                <div id="progressFill" class="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-700" style="width: 0%;"></div>
+            </div>
+        </section>
+
+        <!-- Learning Path Cards -->
+        <section class="px-8 pb-32 max-w-5xl mx-auto animate-slide-up-delay">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                <!-- Card 1: Architecture -->
+                <a href="pages/01-architecture-overview.html" id="card-01" class="group relative p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-blue-500/40 card-glow transition-all duration-300 transform hover:-translate-y-1.5">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        </div>
+                        <span class="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded">10 min</span>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2 text-slate-100 group-hover:text-blue-400 transition-colors">1. Architecture Overview</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed">Two-loop design, component map, progressive compression, comparison to OpenAI.</p>
+                </a>
+
+                <!-- Card 2: Outer Loop -->
+                <a href="pages/02-outer-loop.html" id="card-02" class="group relative p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-indigo-500/40 card-glow transition-all duration-300 transform hover:-translate-y-1.5">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        </div>
+                        <span class="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded">12 min</span>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2 text-slate-100 group-hover:text-indigo-400 transition-colors">2. Outer Loop</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed">Skill optimization pipeline, runners, judges, eval-gating, CLI runner for OpenCode.</p>
+                </a>
+
+                <!-- Card 3: Inner Loop -->
+                <a href="pages/03-inner-loop.html" id="card-03" class="group relative p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-purple-500/40 card-glow transition-all duration-300 transform hover:-translate-y-1.5">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        </div>
+                        <span class="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded">12 min</span>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2 text-slate-100 group-hover:text-purple-400 transition-colors">3. Inner Loop</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed">SFT/DPO/GRPO training, progressive compression, SAD, Agent-as-Annotators.</p>
+                </a>
+
+                <!-- Card 4: MLflow Bridge -->
+                <a href="pages/04-mlflow-bridge.html" id="card-04" class="group relative p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-emerald-500/40 card-glow transition-all duration-300 transform hover:-translate-y-1.5">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path></svg>
+                        </div>
+                        <span class="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded">10 min</span>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2 text-slate-100 group-hover:text-emerald-400 transition-colors">4. MLflow Bridge</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed">Trace schema, feedback API, trace-to-training gap, RHOAI deployment.</p>
+                </a>
+
+                <!-- Card 5: Sprint 1 -->
+                <a href="pages/05-sprint1.html" id="card-05" class="group relative p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-amber-500/40 card-glow transition-all duration-300 transform hover:-translate-y-1.5">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-orange-500 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                        </div>
+                        <span class="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded">8 min</span>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2 text-slate-100 group-hover:text-amber-400 transition-colors">5. Sprint 1 Assessment</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed">Goal-by-goal review, blockers, loop interference, eval reliability.</p>
+                </a>
+
+                <!-- Card 6: Risks -->
+                <a href="pages/06-risks.html" id="card-06" class="group relative p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-rose-500/40 card-glow transition-all duration-300 transform hover:-translate-y-1.5">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 to-red-500 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-rose-500/10 rounded-xl flex items-center justify-center text-rose-400 group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>
+                        </div>
+                        <span class="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded">10 min</span>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2 text-slate-100 group-hover:text-rose-400 transition-colors">6. Risks & Recommendations</h3>
+                    <p class="text-sm text-slate-500 leading-relaxed">7 identified risks, gap analysis, Sprint 2 priorities, POC success criteria.</p>
+                </a>
+
+                <!-- Card 7: Implementation Progress -->
+                <a href="pages/07-implementation.html" id="card-07" class="group relative p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-teal-500/40 card-glow transition-all duration-300 transform hover:-translate-y-1.5 md:col-span-2 lg:col-span-3">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-teal-500/10 rounded-xl flex items-center justify-center text-teal-400 group-hover:scale-110 transition-transform">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-100 group-hover:text-teal-400 transition-colors">7. Implementation Progress</h3>
+                                <p class="text-sm text-slate-500">Cluster setup, 9 issues solved, validated configs, what's next</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-teal-400 bg-teal-500/10 px-2 py-1 rounded border border-teal-500/30">NEW</span>
+                            <span class="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded">8 min</span>
+                        </div>
+                    </div>
+                </a>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- AI Chat FAB -->
+    <div onclick="toggleChat()" class="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-[0_0_30px_rgba(59,130,246,0.4)] flex items-center justify-center text-white cursor-pointer hover:scale-110 transition-transform z-50 animate-glow">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+    </div>
+
+    <!-- AI Chat Panel -->
+    <div id="chatPanel" class="chat-panel fixed bottom-28 right-8 w-[400px] h-[520px] glass rounded-2xl shadow-2xl flex-col overflow-hidden z-40" style="display: none; opacity: 0; transform: translateY(20px);">
+        <div class="h-14 border-b border-slate-800 flex justify-between items-center px-5">
+            <div class="flex items-center gap-2 text-slate-200 font-semibold text-sm">
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                AI Assistant
+            </div>
+            <div class="flex gap-1">
+                <button onclick="clearChat()" class="p-1.5 rounded-md hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors text-xs">Clear</button>
+                <button onclick="toggleMaximize()" class="p-1.5 rounded-md hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors">&#x2922;</button>
+                <button onclick="toggleChat()" class="p-1.5 rounded-md hover:bg-slate-800 text-slate-500 hover:text-red-400 transition-colors">&#x2715;</button>
+            </div>
+        </div>
+        <div id="chatMessages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3"></div>
+        <div class="p-4 border-t border-slate-800">
+            <div class="relative">
+                <textarea id="chatInput" placeholder="Ask about the architecture..." onkeydown="handleChatEnter(event)" class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-4 pr-12 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none placeholder-slate-500" rows="1"></textarea>
+                <button id="sendBtn" onclick="sendChatMessage()" class="absolute right-2 bottom-2 w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center justify-center transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('teach-me-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+            document.body.classList.toggle('bg-slate-950', document.documentElement.classList.contains('dark'));
+            document.body.classList.toggle('bg-white', !document.documentElement.classList.contains('dark'));
+            document.body.classList.toggle('text-slate-100', document.documentElement.classList.contains('dark'));
+            document.body.classList.toggle('text-slate-900', !document.documentElement.classList.contains('dark'));
+        }
+        if(localStorage.getItem('teach-me-theme') === 'light') toggleTheme();
+
+        // Progress
+        const visited = JSON.parse(localStorage.getItem('teach-me-visited') || '[]');
+        const total = 7;
+        let done = ['01','02','03','04','05','06','07'].filter(n => visited.includes(n)).length;
+        document.getElementById('progressFill').style.width = `${(done/total)*100}%`;
+        document.getElementById('progressText').innerText = `${Math.round((done/total)*100)}% Complete`;
+        ['01','02','03','04','05','06','07'].forEach(n => {
+            if(visited.includes(n)) {
+                const card = document.getElementById(`card-${n}`);
+                if(card) card.querySelector('h3').classList.add('text-green-400');
+            }
+        });
+
+        // Command Palette
+        function openCmdPalette() { document.getElementById('cmdPalette').classList.add('active'); document.getElementById('cmdInput').focus(); }
+        function closeCmdPalette() { document.getElementById('cmdPalette').classList.remove('active'); }
+        window.addEventListener('keydown', e => {
+            if((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openCmdPalette(); }
+            if(e.key === 'Escape') closeCmdPalette();
+        });
+        function searchPages(q) {
+            const results = document.getElementById('cmdResults');
+            if(!q) { results.innerHTML = ''; return; }
+            const idx = JSON.parse(localStorage.getItem('teach-me-search-index') || '{}');
+            results.innerHTML = '';
+            for(const [url, data] of Object.entries(idx)) {
+                if(data.title.toLowerCase().includes(q.toLowerCase()) || data.snippet.toLowerCase().includes(q.toLowerCase())) {
+                    const div = document.createElement('div');
+                    div.className = 'px-6 py-3 border-b border-slate-800 hover:bg-slate-800/50 cursor-pointer transition-colors';
+                    div.innerHTML = `<div class="font-medium text-blue-400 text-sm">${data.title}</div><div class="text-xs text-slate-500 mt-1 line-clamp-1">${data.snippet}</div>`;
+                    div.onclick = () => { closeCmdPalette(); window.location.href = url; };
+                    results.appendChild(div);
+                }
+            }
+            if(!results.children.length) results.innerHTML = '<div class="px-6 py-4 text-sm text-slate-500">No results</div>';
+        }
+
+        // Chat
+        const chatPanel = document.getElementById('chatPanel');
+        function toggleChat() {
+            const vis = chatPanel.style.display === 'flex';
+            if(vis) { chatPanel.style.opacity='0'; chatPanel.style.transform='translateY(20px)'; setTimeout(()=>chatPanel.style.display='none',300); }
+            else { chatPanel.style.display='flex'; setTimeout(()=>{chatPanel.style.opacity='1';chatPanel.style.transform='translateY(0)';},10); loadChatMessages(); }
+        }
+        function toggleMaximize() { chatPanel.classList.toggle('maximized'); }
+        function loadChatMessages() {
+            const msgs = document.getElementById('chatMessages');
+            const history = JSON.parse(localStorage.getItem('teach-me-chat-history') || '[]');
+            msgs.innerHTML = '';
+            if(!history.length) appendChatMsg('ai','Hi! Ask me anything about the Agentic Continual Learning architecture.');
+            history.forEach(m => appendChatMsg(m.role, m.text));
+        }
+        function appendChatMsg(role, text) {
+            const msgs = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = `max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${role==='user' ? 'bg-blue-600 text-white self-end rounded-br-none' : 'bg-slate-800 text-slate-200 self-start rounded-bl-none border border-slate-700'}`;
+            div.innerText = text;
+            msgs.appendChild(div);
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+        function saveChatMsg(role, text) {
+            const h = JSON.parse(localStorage.getItem('teach-me-chat-history') || '[]');
+            h.push({role, text}); if(h.length > 50) h.shift();
+            localStorage.setItem('teach-me-chat-history', JSON.stringify(h));
+        }
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim(); if(!text) return;
+            appendChatMsg('user', text); saveChatMsg('user', text);
+            input.value = ''; input.disabled = true;
+            const dots = document.createElement('div');
+            dots.id = 'typingDots';
+            dots.className = 'self-start flex gap-1 px-4 py-3 bg-slate-800 rounded-2xl rounded-bl-none border border-slate-700';
+            dots.innerHTML = '<div class="w-2 h-2 bg-slate-500 rounded-full typing-dot"></div><div class="w-2 h-2 bg-slate-500 rounded-full typing-dot"></div><div class="w-2 h-2 bg-slate-500 rounded-full typing-dot"></div>';
+            document.getElementById('chatMessages').appendChild(dots);
+            try {
+                const res = await fetch('http://localhost:3847/ask', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:text,context:document.querySelector('main').innerText.substring(0,2000)})});
+                const data = await res.json();
+                dots.remove();
+                appendChatMsg('ai', data.answer); saveChatMsg('ai', data.answer);
+            } catch(e) { dots.remove(); appendChatMsg('ai','Cannot connect to AI server. Run: node ai-server.js'); }
+            finally { input.disabled = false; input.focus(); }
+        }
+        function handleChatEnter(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMessage();} }
+        function clearChat() { if(confirm('Clear chat history?')){localStorage.removeItem('teach-me-chat-history');loadChatMessages();} }
+    </script>
+</body>
+</html>
