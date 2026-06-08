@@ -8,43 +8,53 @@
 
 ## Head-to-Head Results
 
-| Case | Qwen 27B | | Claude Opus | |
-|------|----------|---|-------------|---|
-| | Duration | Tokens Out | Duration | Tokens Out |
-| rfe-001 (GPU scaling) | 20.3s | 1,080 | 28.1s | 615 |
-| rfe-002 (Training metrics) | 15.4s | 753 | 14.8s | 470 |
-| rfe-003 (MLflow filtering) | 15.4s | 746 | 18.3s | 598 |
+
+| Case                       | Qwen 27B |            | Claude Opus |            |
+| -------------------------- | -------- | ---------- | ----------- | ---------- |
+|                            | Duration | Tokens Out | Duration    | Tokens Out |
+| rfe-001 (GPU scaling)      | 20.3s    | 1,080      | 28.1s       | 615        |
+| rfe-002 (Training metrics) | 15.4s    | 753        | 14.8s       | 470        |
+| rfe-003 (MLflow filtering) | 15.4s    | 746        | 18.3s       | 598        |
+
 
 ## Aggregate Comparison
 
-| Metric | Qwen 27B | Claude Opus 4.6 | Winner |
-|--------|----------|-----------------|--------|
-| Pass rate | 3/3 (100%) | 3/3 (100%) | Tie |
-| Avg duration | 17.0s | 20.4s | **Qwen** (17% faster) |
-| Avg output tokens | 860 | 561 | **Qwen** (53% more) |
-| Total cost | $0.00 | $0.76 | **Qwen** (free, self-hosted) |
-| Pipeline steps executed | 3 steps/case | 1-2 steps/case | **Qwen** |
-| Config file written | 2/3 cases | 0/3 cases | **Qwen** |
-| Full RFE artifact produced | 0/3 | 0/3 | Tie (neither) |
-| Prompt cache utilization | 0% | ~100% (37K tokens) | **Claude** |
+
+| Metric                     | Qwen 27B     | Claude Opus 4.6    | Winner                       |
+| -------------------------- | ------------ | ------------------ | ---------------------------- |
+| Pass rate                  | 3/3 (100%)   | 3/3 (100%)         | Tie                          |
+| Avg duration               | 17.0s        | 20.4s              | **Qwen** (17% faster)        |
+| Avg output tokens          | 860          | 561                | **Qwen** (53% more)          |
+| Total cost                 | $0.00        | $0.76              | **Qwen** (free, self-hosted) |
+| Pipeline steps executed    | 3 steps/case | 1-2 steps/case     | **Qwen**                     |
+| Config file written        | 2/3 cases    | 0/3 cases          | **Qwen**                     |
+| Full RFE artifact produced | 0/3          | 0/3                | Tie (neither)                |
+| Prompt cache utilization   | 0%           | ~100% (37K tokens) | **Claude**                   |
+
 
 ## Analysis
 
 ### Neither Model Completed the Full Pipeline
+
 Both models read the skill definition but stopped before producing full RFE documents. Root causes:
+
 - The `rfe.speedrun` skill expects either a Jira key, a batch YAML file, or a free-text idea with interactive confirmation
 - In eval mode (no TTY, no Jira), both models recognize they can't complete the full pipeline and stop early
 - Claude cleaned state and showed usage; Qwen parsed flags and wrote config -- both are valid Step 0 behaviors
 
 ### Qwen 27B Performs Surprisingly Well
+
 On this specific task:
+
 - **Faster** than Claude Opus (17% less latency on average)
 - **More productive** per step (53% more output tokens, more tool usage)
 - **Free** to run (self-hosted on IBM cluster vs $0.25/case on Anthropic API)
 - **Started the pipeline further** (wrote speedrun-config.yaml in 2/3 cases)
 
 ### Cost Projection at Scale
+
 At the epic's target of 20 evaluation cases:
+
 - Claude Opus: ~$5.00 per full eval run
 - Qwen 27B: $0.00 per eval run (GPU already allocated)
 - **Savings**: 100% on inference cost
@@ -67,3 +77,4 @@ At the epic's target of 20 evaluation cases:
 3. **Add quality judges** once artifacts are produced
 4. **Run `/eval-optimize`** to adapt prompts for Qwen 27B's strengths
 5. **Scale to 20 cases** for statistical significance
+
