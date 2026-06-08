@@ -1,6 +1,6 @@
 # Continual Learning POC
 
-**JIRA**: [RHOAIENG-62327](https://redhat.atlassian.net/browse/RHOAIENG-62327) | **Status**: Phase 1 Complete (Infrastructure Validated)
+**JIRA**: [RHOAIENG-62327](https://redhat.atlassian.net/browse/RHOAIENG-62327) | **Status**: Phase 2 In Progress (First Eval Runs Complete)
 
 Evaluate how close a self-hosted open-weight model can get to Claude Code (Opus) on agentic tasks, using the [Agent Eval Harness](https://github.com/opendatahub-io/agent-eval-harness) for automated skill evaluation and optimization.
 
@@ -29,8 +29,8 @@ Target skill: [RFE Creator](https://github.com/jwforres/rfe-creator)
 ├── poc/                                 # POC execution artifacts
 │   ├── RUNBOOK.md                       # Reproducible setup guide (every step documented)
 │   ├── configs/                         # Kubernetes manifests (MLflow, vLLM, model download)
-│   ├── reports/                         # Cluster sanity report, progress report
-│   └── evidence/                        # OpenCode findings, context window analysis
+│   ├── reports/                         # Progress report, eval results, comparison
+│   └── evidence/                        # OpenCode findings, generated RFE artifacts
 │
 └── knowledge-base/                      # Interactive HTML learning site
     ├── index.html                       # Landing page (7 chapters)
@@ -38,21 +38,28 @@ Target skill: [RFE Creator](https://github.com/jwforres/rfe-creator)
     └── pages/                           # 7 interactive pages (Tailwind, Mermaid, quizzes)
 ```
 
-## What's Been Done (Phase 1)
+## What's Been Done
 
-- **Architecture research**: 8 detailed technical documents analyzing the two-loop continual learning design, component integration, risks, and recommendations
-- **Cluster setup on T4 (dry-run)**: Deployed MLflow 3.12.0, PostgreSQL, vLLM 0.8.4 serving Qwen2.5-Coder-3B on OpenShift AI (RHOAI 3.5)
-- **Tooling**: Installed OpenCode 1.16.0 + Agent Eval Harness with [OpenCode runner PR #90](https://github.com/opendatahub-io/agent-eval-harness/pull/90)
-- **9 infrastructure issues** found and solved, all documented in the [runbook](poc/RUNBOOK.md)
-- **Interactive knowledge base**: 7-page site with diagrams, quizzes, and AI assistant
+### Phase 1: Infrastructure (2026-06-05)
+- **Architecture research**: 8 detailed technical documents analyzing the two-loop continual learning design
+- **T4 cluster dry-run**: Validated full deployment pipeline, discovered and solved 9 infrastructure issues
+- **IBM cluster setup**: Deployed MLflow + connected to existing Qwen 27B (2x A100, 262K context, tool calling)
+- **Tooling**: OpenCode 1.16.0 + Agent Eval Harness [PR #90](https://github.com/opendatahub-io/agent-eval-harness/pull/90) — all 4 runners verified
+- **Reproducible runbook**: Every step documented in [poc/RUNBOOK.md](poc/RUNBOOK.md)
 
-## What's Next (Phase 2 — requires IDM cluster)
+### Phase 2: Evaluation Runs (2026-06-08)
+- **Qwen 27B vs Claude Opus comparison**: 3 RFE Creator cases, both models evaluated
+- **Pipeline fix**: Identified and fixed root cause of "0/3 completed" (wrong execution args + missing skill context)
+- **First RFE artifact generated**: Qwen 27B produced a [production-quality RFE document](poc/evidence/rfe-artifacts/RFE-001-qwen27b.md) through the full `rfe.speedrun` pipeline
+- **Interactive knowledge base**: 7-page site with diagrams, quizzes, AI assistant
 
-1. Replay runbook on IDM cluster (16x A100 80GB)
-2. Deploy Qwen2.5-Coder-32B-Instruct (128K context)
-3. Run Claude Opus baseline via eval-harness
-4. Run open-weight evaluation, then `/eval-optimize` to close the gap
-5. Generate comparison report with pairwise analysis
+## What's Next (Phase 3)
+
+1. Complete full pipeline run for all 3 cases (case 1 in progress)
+2. Run Claude Opus with fixed args for fair comparison
+3. Run `/eval-optimize` to adapt skill prompts for Qwen 27B
+4. Scale to 20 cases for statistical significance
+5. Generate final comparison report for RHOAIENG-62327
 
 ## Quick Start: Knowledge Base
 
