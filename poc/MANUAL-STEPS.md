@@ -1,106 +1,74 @@
-# Manual Steps: Run Eval Overnight
+# Fix: Run Qwen 27B Through Claude Code (Not OpenCode)
 
-## What You Have (already set up)
-- IBM cluster: `oc whoami` → `knema@redhat.com`
-- MLflow running: https://mlflow-kapil-continual-test.apps.oai-kft-ibm.ibm.rh-ods.com (returns OK)
-- Qwen 27B running: https://qwen36-27b-ksuta-nemotron.apps.oai-kft-ibm.ibm.rh-ods.com
-- RFE Creator repo with 20 test cases + proper eval.yaml (8 judges, batch mode)
-- Agent eval-harness on `feat/otel-opencode-runner` branch
-- OpenCode 1.16.0 with `opencode.json` pointing at Qwen 27B
+## The Problem
+OpenCode doesn't support the `Agent` tool for spawning sub-agents. The `rfe.speedrun` skill needs this for Phase 2 (auto-fix) and review. That's why Qwen 27B only completed Phase 1.
 
-## Step 1: Set Up Terminal (tmux recommended)
+## The Solution
+vLLM implements the **Anthropic Messages API** natively. We can run Claude Code pointing at our vLLM Qwen 27B endpoint. Claude Code handles all the orchestration (Agent tool, sub-agents, permissions) while Qwen 27B generates the content.
 
+This is exactly how the Nemotron report was produced: `Agent: claude-code`, `Model: nemotron-3-ultra`.
+
+## Steps
+
+### 1. Get fresh cluster token
 ```bash
-tmux new -s eval-overnight
-```
-
-## Step 2: Set Environment
-
-```bash
-export NODE_TLS_REJECT_UNAUTHORIZED=0
-export ANTHROPIC_API_KEY="your-anthropic-key"
-cd /Users/knema/Project/agentic-ai-skills/rfe-creator
-```
-
-## Step 3: Update opencode.json with fresh token
-
-```bash
-# Get fresh token
+oc login  # if token expired
 TOKEN=$(oc whoami -t)
-
-cat > opencode.json <<EOF
-{
-  "\$schema": "https://opencode.ai/config.json",
-  "provider": {
-    "vllm-ibm": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "vLLM IBM Cluster",
-      "options": {
-        "baseURL": "https://qwen36-27b-ksuta-nemotron.apps.oai-kft-ibm.ibm.rh-ods.com/v1",
-        "headers": {
-          "Authorization": "Bearer $TOKEN"
-        }
-      },
-      "models": {
-        "qwen36-27b": {
-          "name": "Qwen 3.6 27B"
-        }
-      }
-    }
-  },
-  "model": "vllm-ibm/qwen36-27b"
-}
-EOF
 ```
 
-## Step 4: Run Claude Opus Baseline (~60-90 min)
-
+### 2. Launch Claude Code pointing at vLLM Qwen 27B
 ```bash
+cd /Users/knema/Project/agentic-ai-skills/rfe-creator
+
+ANTHROPIC_BASE_URL=https://qwen36-27b-ksuta-nemotron.apps.oai-kft-ibm.ibm.rh-ods.com \
+ANTHROPIC_API_KEY=dummy \
+ANTHROPIC_AUTH_TOKEN=$TOKEN \
+ANTHROPIC_DEFAULT_OPUS_MODEL=qwen36-27b \
+ANTHROPIC_DEFAULT_SONNET_MODEL=qwen36-27b \
+ANTHROPIC_DEFAULT_HAIKU_MODEL=qwen36-27b \
+NODE_TLS_REJECT_UNAUTHORIZED=0 \
 claude
 ```
 
-Inside Claude Code:
+### 3. Run the eval inside Claude Code
 ```
-/eval-run --model opus --run-id 2026-06-08-opus-baseline
-```
-
-Wait for it to complete. Report will be at: `eval/runs/2026-06-08-opus-baseline/report.html`
-
-## Step 5: Run Qwen 27B with Baseline Comparison (~90-120 min)
-
-Still inside Claude Code:
-```
-/eval-run --model vllm-ibm/qwen36-27b --agent opencode --run-id 2026-06-08-qwen27b --baseline 2026-06-08-opus-baseline
+/eval-run --model opus --run-id 2026-06-09-qwen27b-via-claude --baseline 2026-06-08-opus-baseline
 ```
 
-This will:
-- Run all 20 cases through Qwen 27B via OpenCode
-- Score with 8 judges (6 deterministic + 2 LLM quality judges using Claude Opus)
-- Run pairwise A/B comparison against the Opus baseline
-- Generate HTML report with diffs, scores, analysis
+Note: `--model opus` maps to `ANTHROPIC_DEFAULT_OPUS_MODEL=qwen36-27b`, so it actually uses Qwen.
 
-Report: `eval/runs/2026-06-08-qwen27b/report.html`
-
-## Step 6: View Reports
-
+### 4. For overnight run (tmux)
 ```bash
-open eval/runs/2026-06-08-opus-baseline/report.html
-open eval/runs/2026-06-08-qwen27b/report.html
+tmux new -s qwen-eval
+
+cd /Users/knema/Project/agentic-ai-skills/rfe-creator
+
+TOKEN=$(oc whoami -t)
+
+ANTHROPIC_BASE_URL=https://qwen36-27b-ksuta-nemotron.apps.oai-kft-ibm.ibm.rh-ods.com \
+ANTHROPIC_API_KEY=dummy \
+ANTHROPIC_AUTH_TOKEN=$TOKEN \
+ANTHROPIC_DEFAULT_OPUS_MODEL=qwen36-27b \
+ANTHROPIC_DEFAULT_SONNET_MODEL=qwen36-27b \
+ANTHROPIC_DEFAULT_HAIKU_MODEL=qwen36-27b \
+NODE_TLS_REJECT_UNAUTHORIZED=0 \
+claude
+
+# Inside Claude Code:
+/eval-run --model opus --run-id 2026-06-09-qwen27b-via-claude --baseline 2026-06-08-opus-baseline
+
+# Detach: Ctrl-B D
 ```
 
-## Detach tmux (if running overnight)
+## Why This Works
+- Claude Code sends requests in Anthropic Messages format
+- vLLM v0.8.4+ translates these to its internal format
+- Qwen 27B generates responses (including tool calls)
+- Claude Code handles Agent tool, sub-agents, permissions natively
+- The eval-harness sees `runner: claude-code` so the full pipeline runs
 
-```
-Ctrl-B then D
-```
-
-Re-attach next morning:
-```bash
-tmux attach -s eval-overnight
-```
-
-## Notes
-
-- Token expiry: `oc` tokens expire after ~24h. If the Qwen 27B run fails with 401, re-login (`oc login`) and update `opencode.json` with a fresh token.
-- Cost: The Opus baseline will cost ~$5-10 (20 cases × ~$0.25-0.50 each). Qwen 27B is free. LLM judges use Claude Opus too (~$2-3 for scoring).
-- The eval.yaml uses `execution.mode: batch` which means all 20 cases are bundled into a single `batch.yaml` and processed in one skill invocation.
+## Important Notes
+- The `$TOKEN` is an OpenShift bearer token for the vLLM route auth. It expires after ~24h.
+- `ANTHROPIC_API_KEY=dummy` is required but not used (vLLM auth is via the bearer token in the route).
+- The model name `qwen36-27b` must match the `--served-model-name` in the vLLM deployment.
+- The vLLM endpoint already has `--enable-auto-tool-choice --tool-call-parser qwen3_coder` which handles Claude Code's tool calling format.
